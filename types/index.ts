@@ -207,3 +207,49 @@ export interface DashboardNotificationViewModel {
   type: "info" | "warning" | "success";
   dotColor: string;
 }
+
+export interface TuitionSummaryViewModel {
+  totalTuition: number;
+  paidAmount: number;
+  remainingBalance: number;
+  dueDate: string;
+  semester: string;
+  status: "paid" | "partial" | "unpaid" | "overdue";
+  courseTuition: TuitionCourseItem[];
+  otherFees: TuitionFeeItem[];
+}
+
+export interface TuitionCourseItem {
+  id: number;
+  code: string;
+  name: string;
+  credits: number;
+  pricePerCredit: number;
+  total: number;
+  status: string;
+}
+
+export interface TuitionFeeItem {
+  id: number;
+  name: string;
+  amount: number;
+  status: string;
+}
+
+export interface PaymentHistoryItem {
+  id: number;
+  date: string;
+  amount: number;
+  method: string;
+  status: string;
+  reference: string;
+}
+
+export interface InvoiceItem {
+  id: number;
+  number: string;
+  date: string;
+  amount: number;
+  semester: string;
+  status: string;
+}

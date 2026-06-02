@@ -20,6 +20,7 @@ interface CourseTableProps {
   registeredCourseIds: string[]
   onRegister: (course: CourseRegistrationItem) => void
   registrationDisabled?: boolean
+  conflictingCourseIds?: string[]
 }
 
 const dayNames = ["", "CN", "T2", "T3", "T4", "T5", "T6", "T7"]
@@ -29,6 +30,7 @@ export function CourseTable({
   registeredCourseIds,
   onRegister,
   registrationDisabled = false,
+  conflictingCourseIds = [],
 }: CourseTableProps) {
   const getSeatPercentage = (remaining: number, total: number) => {
     return ((total - remaining) / total) * 100
@@ -67,12 +69,19 @@ export function CourseTable({
               {courses.map((course) => {
                 const isRegistered = registeredCourseIds.includes(course.id)
                 const isFull = course.remainingSeats === 0
+                const hasConflict = conflictingCourseIds.includes(course.id)
                 const seatPercentage = getSeatPercentage(course.remainingSeats, course.totalSeats)
 
                 return (
                   <TableRow
                     key={course.id}
-                    className={isFull ? "opacity-60 bg-muted/30" : ""}
+                    className={
+                      hasConflict
+                        ? "bg-red-50 border-l-4 border-l-red-500"
+                        : isFull
+                          ? "opacity-60 bg-muted/30"
+                          : ""
+                    }
                   >
                     <TableCell>
                       <Badge variant="outline" className="font-mono">

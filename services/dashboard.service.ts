@@ -89,6 +89,33 @@ async function fetchStudentContext(): Promise<{
 }
 
 const DashboardService = {
+  // Admin Dashboard APIs
+  getAdminStats: async (): Promise<{
+    totalStudents: number;
+    totalCourses: number;
+    totalClasses: number;
+    totalRegistrations: number;
+  }> => {
+    try {
+      const [studentsRes, coursesRes, classesRes, registrationsRes] = await Promise.all([
+        api.get<{ total: number }>("/admin/stats/students"),
+        api.get<{ total: number }>("/admin/stats/courses"),
+        api.get<{ total: number }>("/admin/stats/classes"),
+        api.get<{ total: number }>("/admin/stats/registrations"),
+      ]);
+
+      return {
+        totalStudents: studentsRes.data.total,
+        totalCourses: coursesRes.data.total,
+        totalClasses: classesRes.data.total,
+        totalRegistrations: registrationsRes.data.total,
+      };
+    } catch (error) {
+      console.error("Error fetching admin stats:", error);
+      throw error;
+    }
+  },
+
   getStatsCards: async (): Promise<StatsCardViewModel[]> => {
     const { me, registrations, monHocList } = await fetchStudentContext();
     const active = registrations.filter((dk) => dk.trangThaiDK === 1);

@@ -18,6 +18,8 @@ interface RegisteredCoursesProps {
   courses: RegisteredCourseItem[]
   totalCredits: number
   onUnregister: (courseId: string) => void
+  onSubmit?: () => Promise<void>
+  isSubmitting?: boolean
 }
 
 const dayNames = ["", "CN", "T2", "T3", "T4", "T5", "T6", "T7"]
@@ -26,6 +28,8 @@ export function RegisteredCourses({
   courses,
   totalCredits,
   onUnregister,
+  onSubmit,
+  isSubmitting = false,
 }: RegisteredCoursesProps) {
   return (
     <Card>
@@ -99,8 +103,20 @@ export function RegisteredCourses({
               </TableBody>
             </Table>
           </div>
-        )}
-      </CardContent>
-    </Card>
-  )
+         )}
+       </CardContent>
+       {courses.length > 0 && onSubmit && (
+         <div className="border-t border-border px-6 py-4 bg-muted/30">
+           <Button
+             onClick={onSubmit}
+             disabled={isSubmitting}
+             className="w-full"
+             size="lg"
+           >
+             {isSubmitting ? "Đang xử lý..." : "Xác nhận đăng ký"}
+           </Button>
+         </div>
+       )}
+     </Card>
+   )
 }

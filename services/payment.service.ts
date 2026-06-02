@@ -1,5 +1,5 @@
 import api from "../lib/api";
-import { SinhVienMe, TuitionStatusViewModel } from "../types";
+import { SinhVienMe, TuitionStatusViewModel, TuitionSummaryViewModel } from "../types";
 
 const PaymentService = {
   getTuitionStatus: async (): Promise<TuitionStatusViewModel> => {
@@ -19,6 +19,24 @@ const PaymentService = {
       isBlocked: false,
       message: "",
     };
+  },
+
+  getTuitionSummary: async (): Promise<TuitionSummaryViewModel> => {
+    try {
+      const response = await api.get<TuitionSummaryViewModel>("/hocphi/summary");
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  getTuitionHistory: async (maSinhVien: string): Promise<any[]> => {
+    try {
+      const response = await api.get<any[]>(`/hocphi/history/${maSinhVien}`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   },
 };
 
