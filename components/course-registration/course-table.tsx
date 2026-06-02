@@ -13,17 +13,23 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { BookOpen, Clock, MapPin, User, AlertCircle, Check } from "lucide-react"
-import type { Course } from "@/app/dang-ky-mon/page"
+import type { CourseRegistrationItem } from "@/types"
 
 interface CourseTableProps {
-  courses: Course[]
+  courses: CourseRegistrationItem[]
   registeredCourseIds: string[]
-  onRegister: (course: Course) => void
+  onRegister: (course: CourseRegistrationItem) => void
+  registrationDisabled?: boolean
 }
 
 const dayNames = ["", "CN", "T2", "T3", "T4", "T5", "T6", "T7"]
 
-export function CourseTable({ courses, registeredCourseIds, onRegister }: CourseTableProps) {
+export function CourseTable({
+  courses,
+  registeredCourseIds,
+  onRegister,
+  registrationDisabled = false,
+}: CourseTableProps) {
   const getSeatPercentage = (remaining: number, total: number) => {
     return ((total - remaining) / total) * 100
   }
@@ -137,7 +143,7 @@ export function CourseTable({ courses, registeredCourseIds, onRegister }: Course
                       ) : (
                         <Button
                           size="sm"
-                          disabled={isFull}
+                          disabled={isFull || registrationDisabled}
                           onClick={() => onRegister(course)}
                           className="w-full"
                         >

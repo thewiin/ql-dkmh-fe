@@ -1,37 +1,42 @@
 import api from "../lib/api";
-import { LopHocPhan, ChiTietLichHoc } from "../types";
+import { ChiTietLichHoc, LopHocPhan, LopHocPhanApi } from "../types";
 
 const LopHocPhanService = {
-  getAllLopHocPhan: async (): Promise<LopHocPhan[]> => {
+  getAllLopHocPhan: async (): Promise<LopHocPhanApi[]> => {
     try {
-      const response = await api.get<LopHocPhan[]>("/lophocphan");
+      const response = await api.get<LopHocPhanApi[]>("/lophocphan");
       return response.data;
     } catch (error) {
       throw error;
     }
   },
 
-  getLopHocPhanById: async (id: string): Promise<LopHocPhan> => {
+  getLopHocPhanById: async (id: string): Promise<LopHocPhanApi> => {
     try {
-      const response = await api.get<LopHocPhan>(`/lophocphan/${id}`);
+      const response = await api.get<LopHocPhanApi>(`/lophocphan/${id}`);
       return response.data;
     } catch (error) {
       throw error;
     }
   },
 
-  createLopHocPhan: async (lopHocPhanData: Omit<LopHocPhan, "maLopHocPhan" | "soLuongHienTai">): Promise<LopHocPhan> => {
+  createLopHocPhan: async (
+    lopHocPhanData: Omit<LopHocPhan, "maLopHocPhan" | "soLuongHienTai">
+  ): Promise<LopHocPhanApi> => {
     try {
-      const response = await api.post<LopHocPhan>("/lophocphan", lopHocPhanData);
+      const response = await api.post<LopHocPhanApi>("/lophocphan", lopHocPhanData);
       return response.data;
     } catch (error) {
       throw error;
     }
   },
 
-  updateLopHocPhan: async (id: string, lopHocPhanData: Partial<LopHocPhan>): Promise<LopHocPhan> => {
+  updateLopHocPhan: async (
+    id: string,
+    lopHocPhanData: Partial<LopHocPhan>
+  ): Promise<LopHocPhanApi> => {
     try {
-      const response = await api.put<LopHocPhan>(`/lophocphan/${id}`, lopHocPhanData);
+      const response = await api.put<LopHocPhanApi>(`/lophocphan/${id}`, lopHocPhanData);
       return response.data;
     } catch (error) {
       throw error;
@@ -46,18 +51,21 @@ const LopHocPhanService = {
     }
   },
 
-  getLopHocPhanByMonHoc: async (maMonHoc: string): Promise<LopHocPhan[]> => {
+  getLopHocPhanByMonHoc: async (maMonHoc: string): Promise<LopHocPhanApi[]> => {
     try {
-      const response = await api.get<LopHocPhan[]>(`/lophocphan/monhoc/${maMonHoc}`);
+      const response = await api.get<LopHocPhanApi[]>(`/lophocphan/monhoc/${maMonHoc}`);
       return response.data;
     } catch (error) {
       throw error;
     }
   },
 
-  getLopHocPhanAvailable: async (namHoc?: string, hocKy?: number): Promise<LopHocPhan[]> => {
+  getLopHocPhanAvailable: async (
+    namHoc?: string,
+    hocKy?: number
+  ): Promise<LopHocPhanApi[]> => {
     try {
-      const response = await api.get<LopHocPhan[]>("/lophocphan/available", {
+      const response = await api.get<LopHocPhanApi[]>("/lophocphan/available", {
         params: { namHoc, hocKy },
       });
       return response.data;

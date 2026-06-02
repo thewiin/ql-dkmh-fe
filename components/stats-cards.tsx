@@ -1,46 +1,111 @@
-import { BookOpen, TrendingUp, DollarSign, CalendarCheck } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
+"use client"
 
-const stats = [
-  {
-    label: "Tín chỉ đã đăng ký",
-    value: "18",
-    subtext: "Học kỳ 1/2024",
-    icon: BookOpen,
-    iconBg: "bg-blue-100",
-    iconColor: "text-blue-600",
-  },
-  {
-    label: "GPA hiện tại",
-    value: "3.85",
-    subtext: "Tăng 0.05 điểm",
-    icon: TrendingUp,
-    iconBg: "bg-green-100",
-    iconColor: "text-green-600",
-  },
-  {
-    label: "Học phí còn nợ",
-    value: "0đ",
-    subtext: "Đã thanh toán đủ",
-    icon: DollarSign,
-    iconBg: "bg-orange-100",
-    iconColor: "text-orange-600",
-  },
-  {
-    label: "Tín chỉ tích lũy",
-    value: "108",
-    subtext: "Còn 12 tín chỉ",
-    icon: CalendarCheck,
-    iconBg: "bg-rose-100",
-    iconColor: "text-rose-600",
-  },
-]
+import { useEffect, useState } from "react"
+import { BookOpen, TrendingUp, DollarSign, CalendarCheck, AlertCircle } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import DashboardService from "@/services/dashboard.service"
+import type { StatsCardViewModel } from "@/types"
+
+const STAT_ICONS = [
+  { icon: BookOpen, iconBg: "bg-blue-100", iconColor: "text-blue-600" },
+  { icon: TrendingUp, iconBg: "bg-green-100", iconColor: "text-green-600" },
+  { icon: DollarSign, iconBg: "bg-orange-100", iconColor: "text-orange-600" },
+  { icon: CalendarCheck, iconBg: "bg-rose-100", iconColor: "text-rose-600" },
+] as const
+
+type LoadState = "loading" | "error" | "empty" | "success"
 
 export function StatsCards() {
+  const [state, setState] = useState<LoadState>("loading")
+  const [stats, setStats] = useState<StatsCardViewModel[]>([])
+  const [errorMessage, setErrorMessage] = useState<string>("")
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      setState("loading")
+      setErrorMessage("")
+      try {
+        const data = await DashboardService.getStatsCards()
+        if (cancelled) return
+        if (data.length === 0) {
+          setState("empty")
+          return
+        }
+        setStats(data)
+        setState("success")
+      } catch {
+        if (cancelled) return
+        setErrorMessage(
+          "Không thể tải thống kê. Vui lòng đăng nhập lại hoặc thử sau."
+        )
+        setState("error")
+      }
+    }
+
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  if (state === "loading") {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {STAT_ICONS.map((_, index) => (
+          <Card key={index} className="border-border bg-card">
+            <CardContent className="p-6">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="mt-3 h-9 w-20" />
+              <Skeleton className="mt-2 h-3 w-24" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    )
+  }
+
+  if (state === "error") {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Lỗi tải dữ liệu</AlertTitle>
+        <AlertDescription>{errorMessage}</AlertDescription>
+      </Alert>
+    )
+  }
+
+  if (state === "empty") {
+    return (
+      <Empty className="border border-dashed border-border">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <BookOpen />
+          </EmptyMedia>
+          <EmptyTitle>Chưa có thống kê</EmptyTitle>
+          <EmptyDescription>
+            Đăng ký môn học để xem tín chỉ và học phí trên bảng điều khiển.
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    )
+  }
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {stats.map((stat) => {
-        const Icon = stat.icon
+      {stats.map((stat, index) => {
+        const iconConfig = STAT_ICONS[index] ?? STAT_ICONS[0]
+        const Icon = iconConfig.icon
         return (
           <Card key={stat.label} className="border-border bg-card">
             <CardContent className="flex items-center justify-between p-6">
@@ -49,8 +114,10 @@ export function StatsCards() {
                 <p className="mt-1 text-3xl font-bold text-foreground">{stat.value}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{stat.subtext}</p>
               </div>
-              <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${stat.iconBg}`}>
-                <Icon className={`h-6 w-6 ${stat.iconColor}`} />
+              <div
+                className={`flex h-12 w-12 items-center justify-center rounded-xl ${iconConfig.iconBg}`}
+              >
+                <Icon className={`h-6 w-6 ${iconConfig.iconColor}`} />
               </div>
             </CardContent>
           </Card>

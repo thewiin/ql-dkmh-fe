@@ -12,10 +12,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { CheckCircle, Trash2, GraduationCap } from "lucide-react"
-import type { RegisteredCourse } from "@/app/dang-ky-mon/page"
+import type { RegisteredCourseItem } from "@/types"
 
 interface RegisteredCoursesProps {
-  courses: RegisteredCourse[]
+  courses: RegisteredCourseItem[]
   totalCredits: number
   onUnregister: (courseId: string) => void
 }

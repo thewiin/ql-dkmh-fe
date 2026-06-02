@@ -94,3 +94,116 @@ export interface DashboardStats {
     soLuongToiDa: number;
   }[];
 }
+
+/** DTO khớp ASP.NET Core — GET /auth/me */
+export interface SinhVienMe {
+  maSv: string;
+  ho: string;
+  ten: string;
+  ngaySinh: string;
+  khoa: string;
+  trangThaiHocPhi: boolean;
+}
+
+/** DTO khớp ASP.NET Core — GET /dangky/sinhvien/{maSv} */
+export interface DangKyMonHocResponse {
+  maDK: number;
+  maSV: string;
+  maLHP: string;
+  thoiGianDK: string;
+  hocPhiTamTinh: number;
+  trangThaiDK: number;
+}
+
+/** DTO khớp ASP.NET Core — GET /monhoc */
+export interface MonHocApi {
+  maMH: string;
+  tenMH: string;
+  soTinChi: number;
+  khoa: string;
+}
+
+/** DTO khớp ASP.NET Core — GET /lophocphan */
+export interface LopHocPhanApi {
+  maLHP: string;
+  maMH: string;
+  hocKy: number;
+  namHoc: string;
+  siSoToiDa: number;
+  siSoHienTai: number;
+  trangThai: string;
+  soTiet?: number | null;
+  thu?: number | null;
+}
+
+export interface CourseScheduleSlot {
+  day: number;
+  startTime: string;
+  endTime: string;
+  room: string;
+}
+
+/** View model cho bảng đăng ký môn học */
+export interface CourseRegistrationItem {
+  id: string;
+  code: string;
+  name: string;
+  instructor: string;
+  credits: number;
+  totalSeats: number;
+  remainingSeats: number;
+  schedule: CourseScheduleSlot[];
+  department: string;
+  prerequisite?: string;
+}
+
+export interface RegisteredCourseItem extends CourseRegistrationItem {
+  registeredAt: Date;
+}
+
+export type TuitionStatus = "paid" | "unpaid" | "locked";
+
+export interface TuitionStatusViewModel {
+  status: TuitionStatus;
+  isBlocked: boolean;
+  message: string;
+}
+
+export interface TuitionValidationResult {
+  canRegister: boolean;
+  status: TuitionStatus;
+  message: string;
+}
+
+export interface StatsCardViewModel {
+  label: string;
+  value: string;
+  subtext: string;
+}
+
+export interface GpaChartPoint {
+  semester: string;
+  gpa: number;
+}
+
+export interface GpaChartViewModel {
+  history: GpaChartPoint[];
+  progressPercent: number;
+  completedCredits: number;
+  totalCredits: number;
+}
+
+export interface ScheduleItemViewModel {
+  subject: string;
+  day: string;
+  time: string;
+  room: string;
+  dayColor: string;
+}
+
+export interface DashboardNotificationViewModel {
+  title: string;
+  time: string;
+  type: "info" | "warning" | "success";
+  dotColor: string;
+}

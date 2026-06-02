@@ -2,10 +2,10 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar } from "lucide-react"
-import type { RegisteredCourse } from "@/app/dang-ky-mon/page"
+import type { RegisteredCourseItem } from "@/types"
 
 interface TimetablePreviewProps {
-  courses: RegisteredCourse[]
+  courses: RegisteredCourseItem[]
 }
 
 const dayNames = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"]

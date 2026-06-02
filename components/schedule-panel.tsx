@@ -1,38 +1,57 @@
-import { Clock } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+"use client"
 
-const scheduleItems = [
-  {
-    subject: "Lập trình Web",
-    day: "Thứ 2",
-    time: "07:00 - 09:30",
-    room: "Phòng: A101",
-    dayColor: "bg-blue-100 text-blue-700",
-  },
-  {
-    subject: "Cơ sở dữ liệu",
-    day: "Thứ 3",
-    time: "13:00 - 15:30",
-    room: "Phòng: B203",
-    dayColor: "bg-green-100 text-green-700",
-  },
-  {
-    subject: "Mạng máy tính",
-    day: "Thứ 4",
-    time: "09:45 - 12:15",
-    room: "Phòng: C305",
-    dayColor: "bg-orange-100 text-orange-700",
-  },
-  {
-    subject: "Trí tuệ nhân tạo",
-    day: "Thứ 5",
-    time: "07:00 - 09:30",
-    room: "Phòng: D102",
-    dayColor: "bg-rose-100 text-rose-700",
-  },
-]
+import { useEffect, useState } from "react"
+import { Clock, AlertCircle } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import DashboardService from "@/services/dashboard.service"
+import type { ScheduleItemViewModel } from "@/types"
+
+type LoadState = "loading" | "error" | "empty" | "success"
 
 export function SchedulePanel() {
+  const [state, setState] = useState<LoadState>("loading")
+  const [scheduleItems, setScheduleItems] = useState<ScheduleItemViewModel[]>([])
+  const [errorMessage, setErrorMessage] = useState<string>("")
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      setState("loading")
+      setErrorMessage("")
+      try {
+        const data = await DashboardService.getWeeklySchedule()
+        if (cancelled) return
+        if (data.length === 0) {
+          setState("empty")
+          return
+        }
+        setScheduleItems(data)
+        setState("success")
+      } catch {
+        if (cancelled) return
+        setErrorMessage(
+          "Không thể tải lịch học. Vui lòng đăng nhập lại hoặc thử sau."
+        )
+        setState("error")
+      }
+    }
+
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   return (
     <Card className="border-border bg-card">
       <CardHeader className="pb-3">
@@ -42,28 +61,57 @@ export function SchedulePanel() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {scheduleItems.map((item, index) => (
-          <div
-            key={index}
-            className="rounded-lg border border-border bg-background p-4 transition-colors hover:bg-muted/50"
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <h4 className="font-medium text-foreground">{item.subject}</h4>
-                <div className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
-                  <Clock className="h-3.5 w-3.5" />
-                  {item.time}
+        {state === "loading" &&
+          Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-24 w-full rounded-lg" />
+          ))}
+
+        {state === "error" && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Lỗi tải dữ liệu</AlertTitle>
+            <AlertDescription>{errorMessage}</AlertDescription>
+          </Alert>
+        )}
+
+        {state === "empty" && (
+          <Empty className="border border-dashed border-border py-8">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Clock />
+              </EmptyMedia>
+              <EmptyTitle>Chưa có lịch học</EmptyTitle>
+              <EmptyDescription>
+                Backend chưa cung cấp API thời khóa biểu. Lịch sẽ hiển thị khi có dữ liệu
+                lớp học phần.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        )}
+
+        {state === "success" &&
+          scheduleItems.map((item, index) => (
+            <div
+              key={`${item.subject}-${index}`}
+              className="rounded-lg border border-border bg-background p-4 transition-colors hover:bg-muted/50"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h4 className="font-medium text-foreground">{item.subject}</h4>
+                  <div className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
+                    <Clock className="h-3.5 w-3.5" />
+                    {item.time}
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">{item.room}</p>
                 </div>
-                <p className="mt-1 text-sm text-muted-foreground">{item.room}</p>
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${item.dayColor}`}
+                >
+                  {item.day}
+                </span>
               </div>
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-medium ${item.dayColor}`}
-              >
-                {item.day}
-              </span>
             </div>
-          </div>
-        ))}
+          ))}
       </CardContent>
     </Card>
   )

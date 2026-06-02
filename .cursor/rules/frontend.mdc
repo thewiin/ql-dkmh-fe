@@ -1,0 +1,58 @@
+---
+description: Quy tắc phát triển frontend Next.js — PNUni portal sinh viên
+globs: app/**/*,components/**/*,hooks/**/*,lib/**/*,services/**/*,types/**/*
+alwaysApply: true
+---
+
+# Frontend — PNUni (ql-dkmh-fe)
+
+**Luôn trả lời bằng tiếng Việt** khi làm việc trong dự án này.
+
+## Stack dự án
+
+- **Next.js** — App Router (`app/`)
+- **TypeScript** — bật strict mode (`tsconfig.json`)
+- **Backend** — ASP.NET Core API
+- **UI** — Ant Design (ưu tiên component Ant Design khi thêm màn hình mới; tái sử dụng component hiện có)
+
+## Quy tắc bắt buộc
+
+### Component & UI
+
+- **Tái sử dụng** component đã có trong `components/`, `components/admin/`, `components/course-registration/` — không tạo bản sao (sidebar, header, bảng, form, v.v.).
+- **Không tạo component trùng chức năng** với file đã tồn tại; mở rộng hoặc refactor file cũ nếu cần.
+- **Giữ nguyên giao diện** (layout, màu, spacing, copy) trừ khi người dùng yêu cầu thay đổi UI.
+
+### TypeScript
+
+- Tuân thủ **strict mode**: khai báo kiểu rõ ràng, tránh `any`, dùng interface/type trong `types/`.
+- Đặt type domain dùng chung vào `types/index.ts`, không nhúng type export từ `page.tsx` nếu có thể tránh.
+
+### API & service layer
+
+- **Mọi gọi API** qua lớp `services/*.service.ts`, không gọi `axios` trực tiếp từ page/component.
+- Dùng instance **`axios` từ `lib/api.ts`** (JWT interceptor, base URL) — service import `api` từ đó.
+- Endpoint và DTO khớp contract **ASP.NET Core** backend; không hardcode mock khi đã có service tương ứng (trừ khi được yêu cầu prototype).
+
+### Quy trình chỉnh sửa
+
+- **Đọc file liên quan** (page, component, service, types) trước khi sửa.
+- **Chỉ sửa file cần thiết** — diff tối thiểu, không refactor lan man ngoài phạm vi task.
+- Route mới: thêm `app/**/page.tsx` theo App Router; cập nhật sidebar/link nếu thêm màn hình điều hướng.
+
+## Cấu trúc tham chiếu
+
+| Thư mục | Vai trò |
+|---------|---------|
+| `app/` | Route, layout, page |
+| `components/` | UI tái sử dụng |
+| `services/` | Gọi API (một module / aggregate) |
+| `lib/api.ts` | Axios client dùng chung |
+| `types/` | Interface TypeScript |
+| `hooks/` | Context, hook client |
+
+## Tránh
+
+- Tạo `fetch`/`axios` rải rác trong component.
+- Thêm dependency UI mới khi Ant Design hoặc component sẵn có đủ dùng.
+- Đổi style/spacing/copy mặc định khi task chỉ liên quan logic/API.
