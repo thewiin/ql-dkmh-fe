@@ -10,6 +10,16 @@ const api = axios.create({
   },
 });
 
+let isHandlingUnauthorized = false;
+
+const clearAuthAndRedirect = () => {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem("jwt_token");
+  localStorage.removeItem("auth_role");
+  localStorage.removeItem("auth_user_name");
+  window.location.href = "/login";
+};
+
 // Request interceptor for adding JWT token
 api.interceptors.request.use(
   (config) => {
@@ -30,11 +40,11 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Example error handling: if JWT is expired or invalid, redirect to login
     if (error.response && error.response.status === 401) {
-      console.error("Unauthorized: Invalid or expired token. Redirecting to login.");
-      // Optionally, redirect to login page
-      // window.location.href = "/login"; 
+      if (!isHandlingUnauthorized) {
+        isHandlingUnauthorized = true;
+        clearAuthAndRedirect();
+      }
     }
     return Promise.reject(error);
   }

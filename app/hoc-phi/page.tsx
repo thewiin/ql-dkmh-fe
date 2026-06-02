@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
+import { ProtectedRoute } from "@/components/auth/protected-route"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -50,6 +51,7 @@ import {
 } from "lucide-react"
 import PaymentService from "@/services/payment.service"
 import { TuitionSummaryViewModel, TuitionCourseItem, TuitionFeeItem, PaymentHistoryItem, InvoiceItem } from "@/types"
+import AuthService from "@/services/auth.service"
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount)
@@ -93,51 +95,35 @@ export default function TuitionPage() {
       try {
         setIsLoading(true)
         setError(null)
+        const profile = await AuthService.getProfile()
         const data = await PaymentService.getTuitionSummary()
         setTuitionSummary(data)
         setCourseTuition(data.courseTuition || [])
         setOtherFees(data.otherFees || [])
-        // Mock payment history and invoices for now
-        setPaymentHistory([
-          { id: 1, date: "10/01/2024", amount: 18500000, method: "Chuyển khoản", status: "success", reference: "TXN2024011001" },
-          { id: 2, date: "05/09/2023", amount: 17850000, method: "Thẻ tín dụng", status: "success", reference: "TXN2023090501" },
-          { id: 3, date: "12/01/2023", amount: 16500000, method: "Chuyển khoản", status: "success", reference: "TXN2023011201" },
-          { id: 4, date: "08/09/2022", amount: 15200000, method: "Tiền mặt", status: "success", reference: "TXN2022090801" },
-        ])
-        setInvoices([
-          { id: 1, number: "INV-2024-001", date: "10/01/2024", amount: 18500000, semester: "HK2 2024", status: "paid" },
-          { id: 2, number: "INV-2023-002", date: "05/09/2023", amount: 17850000, semester: "HK1 2024", status: "paid" },
-          { id: 3, number: "INV-2023-001", date: "12/01/2023", amount: 16500000, semester: "HK2 2023", status: "paid" },
-          { id: 4, number: "INV-2022-002", date: "08/09/2022", amount: 15200000, semester: "HK1 2023", status: "paid" },
-        ])
+        if (profile.maSinhVien) {
+          const history = await PaymentService.getTuitionHistory(profile.maSinhVien)
+          setPaymentHistory(history)
+          setInvoices(
+            history.map((payment) => ({
+              id: payment.id,
+              number: payment.reference || `INV-${payment.id}`,
+              date: payment.date,
+              amount: payment.amount,
+              semester: data.semester,
+              status: payment.status === "success" ? "paid" : payment.status,
+            }))
+          )
+        } else {
+          setPaymentHistory([])
+          setInvoices([])
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Không thể tải dữ liệu học phí")
-        // Set fallback data for development
-        const fallbackData: TuitionSummaryViewModel = {
-          totalTuition: 18500000,
-          paidAmount: 18500000,
-          remainingBalance: 0,
-          dueDate: "15/01/2024",
-          semester: "Học kỳ 2 - 2024",
-          status: "paid",
-          courseTuition: [
-            { id: 1, code: "CS301", name: "Lập trình Web", credits: 3, pricePerCredit: 850000, total: 2550000, status: "paid" },
-            { id: 2, code: "CS302", name: "Cơ sở dữ liệu", credits: 3, pricePerCredit: 850000, total: 2550000, status: "paid" },
-            { id: 3, code: "CS303", name: "Mạng máy tính", credits: 3, pricePerCredit: 850000, total: 2550000, status: "paid" },
-            { id: 4, code: "CS304", name: "Trí tuệ nhân tạo", credits: 3, pricePerCredit: 850000, total: 2550000, status: "paid" },
-            { id: 5, code: "CS305", name: "An toàn thông tin", credits: 3, pricePerCredit: 850000, total: 2550000, status: "paid" },
-            { id: 6, code: "GE201", name: "Tiếng Anh chuyên ngành", credits: 2, pricePerCredit: 750000, total: 1500000, status: "paid" },
-            { id: 7, code: "GE202", name: "Kỹ năng mềm", credits: 2, pricePerCredit: 750000, total: 1500000, status: "paid" },
-          ],
-          otherFees: [
-            { id: 1, name: "Bảo hiểm y tế", amount: 750000, status: "paid" },
-            { id: 2, name: "Phí thư viện", amount: 200000, status: "paid" },
-            { id: 3, name: "Phí hoạt động sinh viên", amount: 150000, status: "paid" },
-          ],
-        }
-        setTuitionSummary(fallbackData)
-        setCourseTuition(fallbackData.courseTuition)
-        setOtherFees(fallbackData.otherFees)
+        setTuitionSummary(null)
+        setCourseTuition([])
+        setOtherFees([])
+        setPaymentHistory([])
+        setInvoices([])
       } finally {
         setIsLoading(false)
       }
@@ -158,28 +144,6 @@ export default function TuitionPage() {
               <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
               <p className="text-muted-foreground">Đang tải dữ liệu học phí...</p>
             </div>
-          </main>
-        </div>
-      </div>
-    )
-  }
-
-  // Guard: show empty state
-  if (!tuitionSummary) {
-    return (
-      <div className="flex min-h-screen bg-background">
-        <Sidebar activePage="hoc-phi" />
-        <div className="flex-1 flex flex-col">
-          <Header />
-          <main className="flex-1 p-6 overflow-auto flex items-center justify-center">
-            <Card className="border-0 shadow-sm max-w-md">
-              <CardContent className="p-8 text-center">
-                <AlertCircle className="h-12 w-12 text-amber-600 mx-auto mb-3" />
-                <h3 className="text-lg font-semibold mb-2">Không có dữ liệu</h3>
-                <p className="text-muted-foreground mb-4">Không thể tải thông tin học phí. Vui lòng thử lại sau.</p>
-                <Button onClick={() => window.location.reload()}>Tải lại trang</Button>
-              </CardContent>
-            </Card>
           </main>
         </div>
       </div>
@@ -208,6 +172,28 @@ export default function TuitionPage() {
     )
   }
 
+  // Guard: show empty state
+  if (!tuitionSummary) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar activePage="hoc-phi" />
+        <div className="flex-1 flex flex-col">
+          <Header />
+          <main className="flex-1 p-6 overflow-auto flex items-center justify-center">
+            <Card className="border-0 shadow-sm max-w-md">
+              <CardContent className="p-8 text-center">
+                <AlertCircle className="h-12 w-12 text-amber-600 mx-auto mb-3" />
+                <h3 className="text-lg font-semibold mb-2">Không có dữ liệu</h3>
+                <p className="text-muted-foreground mb-4">Không thể tải thông tin học phí. Vui lòng thử lại sau.</p>
+                <Button onClick={() => window.location.reload()}>Tải lại trang</Button>
+              </CardContent>
+            </Card>
+          </main>
+        </div>
+      </div>
+    )
+  }
+
   const statusConfig = getStatusConfig(tuitionSummary.status)
   const StatusIcon = statusConfig.icon
 
@@ -216,6 +202,7 @@ export default function TuitionPage() {
   const paidPercentage = (tuitionSummary.paidAmount / tuitionSummary.totalTuition) * 100
 
   return (
+    <ProtectedRoute requiredRole="student">
     <div className="flex min-h-screen bg-background">
       <Sidebar activePage="hoc-phi" />
       
@@ -633,6 +620,13 @@ export default function TuitionPage() {
 
             {/* Invoices Tab */}
             <TabsContent value="invoices">
+              {invoices.length === 0 && (
+                <Card className="border-0 shadow-sm mb-4">
+                  <CardContent className="p-4 text-sm text-muted-foreground">
+                    Chưa có dữ liệu hóa đơn từ backend.
+                  </CardContent>
+                </Card>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {invoices.map((invoice) => (
                   <Card key={invoice.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
@@ -685,5 +679,6 @@ export default function TuitionPage() {
         </main>
       </div>
     </div>
+    </ProtectedRoute>
   )
 }

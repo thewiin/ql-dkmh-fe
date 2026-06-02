@@ -1,5 +1,5 @@
 import api from "../lib/api";
-import { ChiTietLichHoc, LopHocPhan, LopHocPhanApi } from "../types";
+import { ChiTietLichHoc, LopHocPhan, LopHocPhanApi, CanMergeLopHocPhanResponse, MergeLopHocPhanRequest, MergeLopHocPhanResponse } from "../types";
 
 const LopHocPhanService = {
   getAllLopHocPhan: async (): Promise<LopHocPhanApi[]> => {
@@ -77,6 +77,36 @@ const LopHocPhanService = {
   getChiTietLichHoc: async (id: string): Promise<ChiTietLichHoc[]> => {
     try {
       const response = await api.get<ChiTietLichHoc[]>(`/lophocphan/${id}/lichhoc`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  getCanMergeLopHocPhan: async (
+    maLopHocPhanTarget: string
+  ): Promise<CanMergeLopHocPhanResponse[]> => {
+    try {
+      const response = await api.get<CanMergeLopHocPhanResponse[]>(
+        `/lophocphan/can-merge`,
+        {
+          params: { maLopHocPhanTarget },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  mergeLopHocPhan: async (
+    mergeRequest: MergeLopHocPhanRequest
+  ): Promise<MergeLopHocPhanResponse> => {
+    try {
+      const response = await api.post<MergeLopHocPhanResponse>(
+        `/lophocphan/merge`,
+        mergeRequest
+      );
       return response.data;
     } catch (error) {
       throw error;

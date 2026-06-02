@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   LayoutDashboard,
   Users,
@@ -16,6 +16,7 @@ import {
   LogOut,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/hooks/use-auth"
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/admin", id: "dashboard" },
@@ -31,10 +32,17 @@ const menuItems = [
 
 export function AdminSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+  const { logout } = useAuth()
 
   const isActive = (href: string) => {
     if (href === "/admin") return pathname === "/admin"
     return pathname.startsWith(href)
+  }
+
+  const handleLogout = () => {
+    logout()
+    router.replace("/login")
   }
 
   return (
@@ -86,7 +94,11 @@ export function AdminSidebar() {
             <p className="text-sm font-medium truncate">Admin System</p>
             <p className="text-xs text-slate-400 truncate">admin@pnuni.edu.vn</p>
           </div>
-          <button className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
+          <button
+            className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+            onClick={handleLogout}
+            type="button"
+          >
             <LogOut className="h-4 w-4" />
           </button>
         </div>

@@ -1,8 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { AdminSidebar } from "@/components/admin/admin-sidebar"
 import { AdminHeader } from "@/components/admin/admin-header"
+import { ProtectedRoute } from "@/components/auth/protected-route"
+import { MergeClassDialog } from "@/components/admin/merge-class-dialog"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -55,10 +57,13 @@ import {
   CheckCircle2,
   XCircle,
   RefreshCw,
-  Download,
-  Upload,
-  Copy,
-} from "lucide-react"
+   Download,
+   Upload,
+   Copy,
+   GitMerge,
+ } from "lucide-react"
+import LopHocPhanService from "@/services/lopHocPhan.service"
+import type { LopHocPhanApi } from "@/types"
 
 interface ClassSection {
   id: string
@@ -264,6 +269,7 @@ const instructors = [
 
 export default function ClassManagementPage() {
   const [classes, setClasses] = useState<ClassSection[]>(initialClasses)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [departmentFilter, setDepartmentFilter] = useState<string>("all")
@@ -272,6 +278,11 @@ export default function ClassManagementPage() {
   const [selectedInstructor, setSelectedInstructor] = useState<string>("")
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false)
+  const [defaultMergeSourceClassId, setDefaultMergeSourceClassId] = useState<string>("")
+  const [defaultMergeTargetClassId, setDefaultMergeTargetClassId] = useState<string>("")
+  const [mergeCandidates, setMergeCandidates] = useState<LopHocPhanApi[]>([])
+  const [isMergeLoading, setIsMergeLoading] = useState(false)
 
   const filteredClasses = classes.filter((cls) => {
     const matchesSearch =
@@ -366,9 +377,96 @@ export default function ClassManagementPage() {
     setSelectedClass(null)
   }
 
+  const mapApiToClassSection = (item: LopHocPhanApi): ClassSection => {
+    const currentClass = classes.find((cls) => cls.id === item.maLHP)
+    return {
+      id: item.maLHP,
+      courseCode: item.maMH,
+      courseName: currentClass?.courseName ?? item.maMH,
+      section: currentClass?.section ?? "01",
+      instructor: currentClass?.instructor ?? null,
+      instructorId: currentClass?.instructorId ?? null,
+      schedule: currentClass?.schedule ?? "-",
+      room: currentClass?.room ?? "-",
+      capacity: item.siSoToiDa,
+      enrolled: item.siSoHienTai,
+      waitlist: currentClass?.waitlist ?? 0,
+      status:
+        item.trangThai === "open" || item.trangThai === "closed" || item.trangThai === "locked"
+          ? item.trangThai
+          : "cancelled",
+      semester: `${item.namHoc}`,
+      department: currentClass?.department ?? "-",
+      credits: currentClass?.credits ?? 0,
+    }
+  }
+
+  const refreshClasses = async () => {
+    setIsRefreshing(true)
+    try {
+      const apiClasses = await LopHocPhanService.getAllLopHocPhan()
+      setClasses(apiClasses.map(mapApiToClassSection))
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  const openMergeDialog = async (targetClassId: string) => {
+    setIsMergeLoading(true)
+    setDefaultMergeSourceClassId("")
+    setDefaultMergeTargetClassId(targetClassId)
+    try {
+      const candidates = await LopHocPhanService.getCanMergeLopHocPhan(targetClassId)
+      setMergeCandidates(candidates)
+      setDefaultMergeSourceClassId(candidates[0]?.maLHP ?? "")
+      setMergeDialogOpen(true)
+    } catch (error) {
+      console.error("Không thể tải danh sách lớp có thể gộp:", error)
+      window.alert("Không thể tải danh sách lớp có thể gộp.")
+    } finally {
+      setIsMergeLoading(false)
+    }
+  }
+
+  const handleMergeClass = async (sourceClassId: string, targetClassId: string) => {
+    await LopHocPhanService.mergeLopHocPhan({
+      maLopHocPhanToMerge: [sourceClassId],
+      maLopHocPhanTarget: targetClassId,
+    })
+    await refreshClasses()
+  }
+
+  const mergeDialogClasses = useMemo(
+    () => {
+      const target = classes.find((item) => item.id === defaultMergeTargetClassId)
+      const targetOption = target
+        ? [
+            {
+              id: target.id,
+              name: `${target.courseCode} - ${target.id}`,
+              currentStudents: target.enrolled,
+              maxCapacity: target.capacity,
+            },
+          ]
+        : []
+      const candidateOptions = mergeCandidates.map((cls) => ({
+        id: cls.maLHP,
+        name: `${cls.maMH} - ${cls.maLHP}`,
+        currentStudents: cls.siSoHienTai,
+        maxCapacity: cls.siSoToiDa,
+      }))
+      const allOptions = [...targetOption, ...candidateOptions]
+      return allOptions.filter(
+        (item, index, array) => array.findIndex((candidate) => candidate.id === item.id) === index
+      )
+    },
+    [classes, defaultMergeTargetClassId, mergeCandidates]
+  )
+
   return (
+    <ProtectedRoute requiredRole="admin">
     <div className="flex min-h-screen bg-background">
-      <AdminSidebar activePage="classes" />
+      <AdminSidebar />
 
       <div className="flex-1 flex flex-col">
         <AdminHeader />
@@ -553,7 +651,7 @@ export default function ClassManagementPage() {
                         <SelectItem value="Ngoại ngữ">Ngoại ngữ</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button variant="outline" size="icon">
+                    <Button variant="outline" size="icon" onClick={refreshClasses} disabled={isRefreshing}>
                       <RefreshCw className="h-4 w-4" />
                     </Button>
                   </div>
@@ -710,9 +808,18 @@ export default function ClassManagementPage() {
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => duplicateClass(cls)}>
                                     <Copy className="h-4 w-4 mr-2" />
-                                    Nhân bản lớp
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
+                                     Nhân bản lớp
+                                   </DropdownMenuItem>
+                                   <DropdownMenuItem
+                                     onClick={() => {
+                                       void openMergeDialog(cls.id)
+                                     }}
+                                     disabled={isMergeLoading}
+                                   >
+                                     <GitMerge className="h-4 w-4 mr-2" />
+                                     Gộp lớp
+                                   </DropdownMenuItem>
+                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem
                                     className="text-red-600"
                                     onClick={() => {
@@ -820,6 +927,17 @@ export default function ClassManagementPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MergeClassDialog
+        open={mergeDialogOpen}
+        onOpenChange={setMergeDialogOpen}
+        classes={mergeDialogClasses}
+        defaultSourceClassId={defaultMergeSourceClassId}
+        defaultTargetClassId={defaultMergeTargetClassId}
+        lockTargetClass
+        onMerge={handleMergeClass}
+      />
     </div>
+    </ProtectedRoute>
   )
 }

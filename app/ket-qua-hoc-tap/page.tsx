@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
+import { ProtectedRoute } from "@/components/auth/protected-route"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -283,6 +284,7 @@ export default function AcademicResultsPage() {
   const totalCreditsRequired = 126
 
   return (
+    <ProtectedRoute requiredRole="student">
     <div className="flex min-h-screen bg-background">
       <Sidebar activePage="ket-qua" />
 
@@ -819,5 +821,6 @@ export default function AcademicResultsPage() {
         </main>
       </div>
     </div>
+    </ProtectedRoute>
   )
 }

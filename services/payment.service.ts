@@ -1,5 +1,10 @@
 import api from "../lib/api";
-import { SinhVienMe, TuitionStatusViewModel, TuitionSummaryViewModel } from "../types";
+import {
+  PaymentHistoryItem,
+  SinhVienMe,
+  TuitionStatusViewModel,
+  TuitionSummaryViewModel,
+} from "../types";
 
 const PaymentService = {
   getTuitionStatus: async (): Promise<TuitionStatusViewModel> => {
@@ -30,9 +35,9 @@ const PaymentService = {
     }
   },
 
-  getTuitionHistory: async (maSinhVien: string): Promise<any[]> => {
+  getTuitionHistory: async (maSinhVien: string): Promise<PaymentHistoryItem[]> => {
     try {
-      const response = await api.get<any[]>(`/hocphi/history/${maSinhVien}`);
+      const response = await api.get<PaymentHistoryItem[]>(`/hocphi/history/${maSinhVien}`);
       return response.data;
     } catch (error) {
       throw error;

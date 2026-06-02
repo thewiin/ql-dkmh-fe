@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -31,6 +31,13 @@ export default function LoginPage() {
     remember: false,
   });
 
+  useEffect(() => {
+    const token = localStorage.getItem("jwt_token");
+    const role = localStorage.getItem("auth_role");
+    if (!token || !role) return;
+    router.replace(role === "admin" ? "/admin" : "/");
+  }, [router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -40,8 +47,8 @@ export default function LoginPage() {
         tenDangNhap: formData.tenDangNhap,
         matKhau: formData.matKhau,
       });
-      // Assuming successful login, redirect to home page
-      router.push("/");
+      const isAdmin = response.vaiTro?.toLowerCase().includes("admin");
+      router.push(isAdmin ? "/admin" : "/");
     } catch (error) {
       console.error("Login failed:", error);
       // TODO: Display a user-friendly error message without modifying UI design significantly

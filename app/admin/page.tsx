@@ -60,6 +60,7 @@ import {
 } from "recharts"
 import { AdminSidebar } from "@/components/admin/admin-sidebar"
 import { AdminHeader } from "@/components/admin/admin-header"
+import { ProtectedRoute } from "@/components/auth/protected-route"
 import DashboardService from "@/services/dashboard.service"
 
 // Stats data
@@ -325,6 +326,7 @@ export default function AdminDashboardPage() {
   ];
 
   return (
+    <ProtectedRoute requiredRole="admin">
     <div className="flex min-h-screen bg-background">
       <AdminSidebar />
 
@@ -811,5 +813,6 @@ export default function AdminDashboardPage() {
         </main>
       </div>
     </div>
+    </ProtectedRoute>
   )
 }

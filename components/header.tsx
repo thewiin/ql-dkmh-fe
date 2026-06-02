@@ -1,10 +1,20 @@
 "use client"
 
 import { Search, Bell, LogOut } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/hooks/use-auth"
 
 export function Header() {
+  const router = useRouter()
+  const { logout } = useAuth()
+
+  const handleLogout = () => {
+    logout()
+    router.replace("/login")
+  }
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background px-6">
       {/* Search Bar */}
@@ -23,7 +33,11 @@ export function Header() {
           <Bell className="h-5 w-5 text-muted-foreground" />
           <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-destructive" />
         </Button>
-        <Button variant="ghost" className="gap-2 text-muted-foreground hover:text-foreground">
+        <Button
+          variant="ghost"
+          className="gap-2 text-muted-foreground hover:text-foreground"
+          onClick={handleLogout}
+        >
           <LogOut className="h-5 w-5" />
           <span className="hidden sm:inline">Đăng xuất</span>
         </Button>

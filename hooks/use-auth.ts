@@ -1,21 +1,62 @@
 "use client";
 
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import AuthService from "@/services/auth.service";
+
+type AppRole = "admin" | "student";
+
+interface AuthUser {
+  name: string;
+  role: AppRole;
+}
 
 interface AuthContextType {
-  test: string;
+  isAuthenticated: boolean;
+  isHydrated: boolean;
+  user: AuthUser | null;
+  logout: () => void;
+  hasRole: (role: AppRole) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [testState, setTestState] = useState("Hello");
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
 
-  return (
-    <AuthContext.Provider value={{ test: testState }}>
-      {children}
-    </AuthContext.Provider>
+  useEffect(() => {
+    const token = localStorage.getItem("jwt_token");
+    const role = localStorage.getItem("auth_role");
+    const name = localStorage.getItem("auth_user_name") || "Người dùng";
+
+    if (token && role) {
+      setUser({
+        name,
+        role: role === "admin" ? "admin" : "student",
+      });
+    } else {
+      setUser(null);
+    }
+    setIsHydrated(true);
+  }, []);
+
+  const logout = () => {
+    AuthService.logout();
+    setUser(null);
+  };
+
+  const value = useMemo<AuthContextType>(
+    () => ({
+      isAuthenticated: Boolean(user),
+      isHydrated,
+      user,
+      logout,
+      hasRole: (role: AppRole) => user?.role === role,
+    }),
+    [isHydrated, user],
   );
+
+  return React.createElement(AuthContext.Provider, { value }, children);
 }
 
 export function useAuth() {

@@ -7,6 +7,10 @@ const AuthService = {
       const response = await api.post<LoginResponse>("/auth/login", credentials);
       if (response.data && response.data.token) {
         localStorage.setItem("jwt_token", response.data.token);
+        const normalizedRole =
+          response.data.vaiTro?.toLowerCase().includes("admin") ? "admin" : "student";
+        localStorage.setItem("auth_role", normalizedRole);
+        localStorage.setItem("auth_user_name", response.data.tenNguoiDung || "");
       }
       return response.data;
     } catch (error) {
@@ -16,6 +20,8 @@ const AuthService = {
 
   logout: (): void => {
     localStorage.removeItem("jwt_token");
+    localStorage.removeItem("auth_role");
+    localStorage.removeItem("auth_user_name");
   },
 
   getProfile: async (): Promise<UserProfile> => {

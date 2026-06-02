@@ -1,4 +1,6 @@
 import PaymentService from "./payment.service";
+import SinhVienService from "./sinhVien.service";
+import LopHocPhanService from "./lopHocPhan.service";
 import type { TuitionValidationResult, CourseScheduleSlot, CourseRegistrationItem, RegisteredCourseItem } from "../types";
 
 export interface ScheduleConflict {
@@ -101,6 +103,39 @@ interface SubmitRegistrationRequest {
   maLHP: string;
 }
 
+type RegistrationWorkflowStep =
+  | "tuition"
+  | "duplicate"
+  | "prerequisite"
+  | "conflict"
+  | "seat"
+  | "submit"
+  | "error_map";
+
+interface WorkflowValidationContext {
+  maSV: string;
+  courses: RegisteredCourseItem[];
+  completedCourseCodes?: string[];
+}
+
+interface WorkflowErrorMap {
+  tuition: string[];
+  duplicate: string[];
+  prerequisite: string[];
+  conflict: string[];
+  seat: string[];
+  submit: string[];
+}
+
+interface RegistrationWorkflowResult {
+  success: boolean;
+  step: RegistrationWorkflowStep;
+  message: string;
+  errorMap: WorkflowErrorMap;
+  submittedCourseIds: string[];
+  failedCourseIds: string[];
+}
+
 const RegistrationService = {
   validateTuition: async (): Promise<TuitionValidationResult> => {
     const tuition = await PaymentService.getTuitionStatus();
@@ -191,6 +226,186 @@ const RegistrationService = {
         message: "Lỗi khi đăng ký: " + (error instanceof Error ? error.message : "Vui lòng thử lại"),
       };
     }
+  },
+
+  executeRegistrationWorkflow: async ({
+    maSV,
+    courses,
+    completedCourseCodes = [],
+  }: WorkflowValidationContext): Promise<RegistrationWorkflowResult> => {
+    const errorMap: WorkflowErrorMap = {
+      tuition: [],
+      duplicate: [],
+      prerequisite: [],
+      conflict: [],
+      seat: [],
+      submit: [],
+    };
+
+    if (!maSV) {
+      errorMap.submit.push("Không thể lấy thông tin sinh viên. Vui lòng đăng nhập lại.");
+      return {
+        success: false,
+        step: "error_map",
+        message: errorMap.submit[0],
+        errorMap,
+        submittedCourseIds: [],
+        failedCourseIds: [],
+      };
+    }
+
+    if (!courses || courses.length === 0) {
+      errorMap.submit.push("Vui lòng chọn ít nhất một môn học để đăng ký.");
+      return {
+        success: false,
+        step: "error_map",
+        message: errorMap.submit[0],
+        errorMap,
+        submittedCourseIds: [],
+        failedCourseIds: [],
+      };
+    }
+
+    const tuition = await RegistrationService.validateTuition();
+    if (!tuition.canRegister) {
+      errorMap.tuition.push(tuition.message || "Bạn không thể đăng ký môn học lúc này.");
+      return {
+        success: false,
+        step: "tuition",
+        message: errorMap.tuition[0],
+        errorMap,
+        submittedCourseIds: [],
+        failedCourseIds: courses.map((course) => course.id),
+      };
+    }
+
+    const seenCourseIds = new Set<string>();
+    courses.forEach((course) => {
+      if (seenCourseIds.has(course.id)) {
+        errorMap.duplicate.push(`Môn "${course.name}" đang bị trùng trong danh sách đăng ký.`);
+      }
+      seenCourseIds.add(course.id);
+    });
+    if (errorMap.duplicate.length > 0) {
+      return {
+        success: false,
+        step: "duplicate",
+        message: errorMap.duplicate[0],
+        errorMap,
+        submittedCourseIds: [],
+        failedCourseIds: courses.map((course) => course.id),
+      };
+    }
+
+    courses.forEach((course) => {
+      if (!course.prerequisite) return;
+      if (!completedCourseCodes.includes(course.prerequisite)) {
+        errorMap.prerequisite.push(
+          `Môn "${course.name}" yêu cầu học trước môn ${course.prerequisite}.`
+        );
+      }
+    });
+    if (errorMap.prerequisite.length > 0) {
+      return {
+        success: false,
+        step: "prerequisite",
+        message: errorMap.prerequisite[0],
+        errorMap,
+        submittedCourseIds: [],
+        failedCourseIds: courses.map((course) => course.id),
+      };
+    }
+
+    for (let i = 0; i < courses.length; i += 1) {
+      const current = courses[i];
+      const compareTargets = courses.slice(0, i).map((course) => ({
+        ...course,
+        registeredAt: course.registeredAt,
+      }));
+      const conflicts = detectScheduleConflicts(current, compareTargets);
+      if (conflicts.length > 0) {
+        errorMap.conflict.push(
+          `Môn "${current.name}" ${formatConflictMessage(conflicts).replace("Trùng lịch với: ", "trùng lịch với ")}`
+        );
+      }
+    }
+    if (errorMap.conflict.length > 0) {
+      return {
+        success: false,
+        step: "conflict",
+        message: errorMap.conflict[0],
+        errorMap,
+        submittedCourseIds: [],
+        failedCourseIds: courses.map((course) => course.id),
+      };
+    }
+
+    courses.forEach((course) => {
+      if (course.remainingSeats <= 0) {
+        errorMap.seat.push(`Môn "${course.name}" đã hết chỗ.`);
+      }
+    });
+    if (errorMap.seat.length > 0) {
+      return {
+        success: false,
+        step: "seat",
+        message: errorMap.seat[0],
+        errorMap,
+        submittedCourseIds: [],
+        failedCourseIds: courses.map((course) => course.id),
+      };
+    }
+
+    const submitResult = await RegistrationService.submitRegistration(courses, maSV);
+    if (!submitResult.success) {
+      errorMap.submit.push(submitResult.message);
+      return {
+        success: false,
+        step: "submit",
+        message: submitResult.message,
+        errorMap,
+        submittedCourseIds: [],
+        failedCourseIds: submitResult.failedCourses ?? courses.map((course) => course.id),
+      };
+    }
+
+    return {
+      success: true,
+      step: "submit",
+      message: submitResult.message,
+      errorMap,
+      submittedCourseIds: courses.map((course) => course.id),
+      failedCourseIds: [],
+    };
+  },
+
+  getCompletedCourseCodesFromBackend: async (maSV: string): Promise<string[]> => {
+    if (!maSV) return [];
+
+    const [diemList, lopHocPhanList] = await Promise.all([
+      SinhVienService.getDiemBySinhVien(maSV),
+      LopHocPhanService.getAllLopHocPhan(),
+    ]);
+
+    const lopHocPhanToMonHocMap = new Map(
+      lopHocPhanList.map((lhp) => [lhp.maLHP, lhp.maMH])
+    );
+
+    const passedCourseCodes = new Set<string>();
+    diemList.forEach((diem) => {
+      const isPassed =
+        (typeof diem.diemTongKet === "number" && diem.diemTongKet >= 5) ||
+        diem.trangThai?.toLowerCase() === "passed";
+
+      if (!isPassed) return;
+
+      const maMonHoc = lopHocPhanToMonHocMap.get(diem.maLopHocPhan);
+      if (maMonHoc) {
+        passedCourseCodes.add(maMonHoc);
+      }
+    });
+
+    return [...passedCourseCodes];
   },
 
   detectScheduleConflicts,

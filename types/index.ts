@@ -159,6 +159,7 @@ export interface CourseRegistrationItem {
 
 export interface RegisteredCourseItem extends CourseRegistrationItem {
   registeredAt: Date;
+  registrationId?: string;
 }
 
 export type TuitionStatus = "paid" | "unpaid" | "locked";
@@ -252,4 +253,18 @@ export interface InvoiceItem {
   amount: number;
   semester: string;
   status: string;
+}
+
+/** DTO khớp ASP.NET Core — GET /api/lophocphan/can-merge */
+export interface CanMergeLopHocPhanResponse extends LopHocPhanApi {}
+
+/** DTO khớp ASP.NET Core — POST /api/lophocphan/merge */
+export interface MergeLopHocPhanRequest {
+  maLopHocPhanToMerge: string[];
+  maLopHocPhanTarget: string; // The class into which others will be merged
+}
+
+export interface MergeLopHocPhanResponse {
+  message: string;
+  mergedLopHocPhanId?: string; // Optional: ID of the resulting merged class
 }
