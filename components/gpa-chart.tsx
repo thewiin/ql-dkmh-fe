@@ -13,45 +13,18 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import DashboardService from "@/services/dashboard.service"
 import type { GpaChartViewModel } from "@/types"
 
-type LoadState = "loading" | "error" | "empty" | "success"
+interface GPAChartProps {
+  isLoading: boolean
+  error?: string
+  data?: GpaChartViewModel | null
+}
 
-export function GPAChart() {
-  const [state, setState] = useState<LoadState>("loading")
-  const [chartData, setChartData] = useState<GpaChartViewModel | null>(null)
-  const [errorMessage, setErrorMessage] = useState<string>("")
+export function GPAChart({ isLoading, error, data }: GPAChartProps) {
+  const isError = !!error
+  const isEmpty = !data
 
-  useEffect(() => {
-    let cancelled = false
-
-    async function load() {
-      setState("loading")
-      setErrorMessage("")
-      try {
-        const data = await DashboardService.getGpaChart()
-        if (cancelled) return
-        if (!data) {
-          setState("empty")
-          return
-        }
-        setChartData(data)
-        setState("success")
-      } catch {
-        if (cancelled) return
-        setErrorMessage(
-          "Không thể tải biểu đồ GPA. Vui lòng đăng nhập lại hoặc thử sau."
-        )
-        setState("error")
-      }
-    }
-
-    void load()
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   return (
     <Card className="border-border bg-card">
@@ -62,7 +35,7 @@ export function GPAChart() {
         <CardDescription>Theo dõi tiến độ học tập của bạn</CardDescription>
       </CardHeader>
       <CardContent>
-        {state === "loading" && (
+        {isLoading && (
           <div className="space-y-6">
             <Skeleton className="h-[250px] w-full" />
             <Skeleton className="h-2 w-full" />
@@ -70,15 +43,15 @@ export function GPAChart() {
           </div>
         )}
 
-        {state === "error" && (
+        {isError && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Lỗi tải dữ liệu</AlertTitle>
-            <AlertDescription>{errorMessage}</AlertDescription>
+            <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
-        {state === "empty" && (
+        {!isLoading && !isError && isEmpty && (
           <Empty className="border border-dashed border-border py-10">
             <EmptyHeader>
               <EmptyMedia variant="icon">
@@ -93,13 +66,13 @@ export function GPAChart() {
           </Empty>
         )}
 
-        {state === "success" && chartData && (
+        {!isLoading && !isError && !isEmpty && data && (
           <>
-            {chartData.history.length > 0 ? (
+            {data.history.length > 0 ? (
               <div className="h-[250px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart
-                    data={chartData.history}
+                    data={data.history}
                     margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                   >
                     <defs>
@@ -155,17 +128,17 @@ export function GPAChart() {
                   Tiến độ hoàn thành chương trình
                 </span>
                 <span className="text-sm font-semibold text-primary">
-                  {chartData.progressPercent}%
+                  {data.progressPercent}%
                 </span>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-primary to-blue-400"
-                  style={{ width: `${chartData.progressPercent}%` }}
+                  style={{ width: `${data.progressPercent}%` }}
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                {chartData.completedCredits}/{chartData.totalCredits} tín chỉ đã hoàn thành
+                {data.completedCredits}/{data.totalCredits} tín chỉ đã hoàn thành
               </p>
             </div>
           </>

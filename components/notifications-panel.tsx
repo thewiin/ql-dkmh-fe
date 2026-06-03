@@ -12,45 +12,18 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import DashboardService from "@/services/dashboard.service"
 import type { DashboardNotificationViewModel } from "@/types"
 
-type LoadState = "loading" | "error" | "empty" | "success"
+interface NotificationsPanelProps {
+  isLoading: boolean
+  error?: string
+  data?: DashboardNotificationViewModel[]
+}
 
-export function NotificationsPanel() {
-  const [state, setState] = useState<LoadState>("loading")
-  const [notifications, setNotifications] = useState<DashboardNotificationViewModel[]>([])
-  const [errorMessage, setErrorMessage] = useState<string>("")
+export function NotificationsPanel({ isLoading, error, data }: NotificationsPanelProps) {
+  const isError = !!error
+  const isEmpty = !data || data.length === 0
 
-  useEffect(() => {
-    let cancelled = false
-
-    async function load() {
-      setState("loading")
-      setErrorMessage("")
-      try {
-        const data = await DashboardService.getNotifications()
-        if (cancelled) return
-        if (data.length === 0) {
-          setState("empty")
-          return
-        }
-        setNotifications(data)
-        setState("success")
-      } catch {
-        if (cancelled) return
-        setErrorMessage(
-          "Không thể tải thông báo. Vui lòng đăng nhập lại hoặc thử sau."
-        )
-        setState("error")
-      }
-    }
-
-    void load()
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   return (
     <Card className="border-border bg-card">
@@ -61,7 +34,7 @@ export function NotificationsPanel() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {state === "loading" &&
+        {isLoading &&
           Array.from({ length: 3 }).map((_, index) => (
             <div key={index} className="flex items-start gap-3">
               <Skeleton className="mt-2 h-2 w-2 shrink-0 rounded-full" />
@@ -72,15 +45,15 @@ export function NotificationsPanel() {
             </div>
           ))}
 
-        {state === "error" && (
+        {isError && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Lỗi tải dữ liệu</AlertTitle>
-            <AlertDescription>{errorMessage}</AlertDescription>
+            <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
-        {state === "empty" && (
+        {!isLoading && !isError && isEmpty && (
           <Empty className="border border-dashed border-border py-8">
             <EmptyHeader>
               <EmptyMedia variant="icon">
@@ -94,8 +67,8 @@ export function NotificationsPanel() {
           </Empty>
         )}
 
-        {state === "success" &&
-          notifications.map((notification, index) => (
+        {!isLoading && !isError && !isEmpty &&
+          data!.map((notification, index) => (
             <div key={index} className="flex items-start gap-3">
               <span
                 className={`mt-2 h-2 w-2 shrink-0 rounded-full ${notification.dotColor}`}

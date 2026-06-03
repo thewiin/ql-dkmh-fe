@@ -25,8 +25,9 @@ export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [formData, setFormData] = useState({
-    tenDangNhap: "",
+    maSv: "",
     matKhau: "",
     remember: false,
   });
@@ -41,17 +42,31 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMessage("");
 
     try {
       const response = await AuthService.login({
-        tenDangNhap: formData.tenDangNhap,
+        maSv: formData.maSv,
         matKhau: formData.matKhau,
       });
-      const isAdmin = response.vaiTro?.toLowerCase().includes("admin");
-      router.push(isAdmin ? "/admin" : "/");
-    } catch (error) {
+      // Backend does not return vaiTro, assuming student for SinhVien login
+      const isAdmin = false;
+      window.location.href = isAdmin ? "/admin" : "/";
+    } catch (error: any) {
       console.error("Login failed:", error);
-      // TODO: Display a user-friendly error message without modifying UI design significantly
+      
+      let errMsg = error.response?.data?.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.";
+      
+      // Map raw backend errors to friendly messages
+      if (errMsg.includes("Data is Null") || errMsg.includes("Null values")) {
+        errMsg = "Tài khoản này đang bị thiếu dữ liệu trên hệ thống. Vui lòng liên hệ Phòng Đào tạo để được hỗ trợ.";
+      } else if (errMsg.includes("Sai mã sinh viên") || errMsg.includes("Sai mật khẩu")) {
+        errMsg = "Mã sinh viên hoặc mật khẩu không chính xác.";
+      } else if (error.message === "Network Error") {
+        errMsg = "Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại đường truyền.";
+      }
+
+      setErrorMessage(errMsg);
     } finally {
       setIsLoading(false);
     }
@@ -179,6 +194,11 @@ export default function LoginPage() {
 
               {/* Form */}
               <form onSubmit={handleSubmit} className="space-y-5">
+                {errorMessage && (
+                  <div className="p-3 text-sm text-red-500 bg-red-50 border border-red-200 rounded-md">
+                    {errorMessage}
+                  </div>
+                )}
                 {/* Username */}
                 <div className="space-y-2">
                   <Label htmlFor="username" className="text-sm font-medium">
@@ -187,13 +207,13 @@ export default function LoginPage() {
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
-                      id="tenDangNhap"
+                      id="maSv"
                       type="text"
                       placeholder="VD: SV2024001"
                       className="pl-10 h-12 bg-[#f1f5f9] border-0 focus-visible:ring-2 focus-visible:ring-[#1e3a5f]"
-                      value={formData.tenDangNhap}
+                      value={formData.maSv}
                       onChange={(e) =>
-                        setFormData({ ...formData, tenDangNhap: e.target.value })
+                        setFormData({ ...formData, maSv: e.target.value })
                       }
                     />
                   </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { ProtectedRoute } from "@/components/auth/protected-route"
@@ -24,8 +24,18 @@ import {
   User,
   Monitor,
   Building,
+  AlertTriangle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Skeleton } from "@/components/ui/skeleton"
+import AuthService from "@/services/auth.service"
+import DangKyService from "@/services/dangKy.service"
+import LopHocPhanService from "@/services/lopHocPhan.service"
+import api from "@/lib/api"
+import type { MonHocApi } from "@/types"
+
+const COLORS = ["bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500", "bg-violet-500", "bg-cyan-500", "bg-orange-500", "bg-fuchsia-500", "bg-indigo-500", "bg-pink-500"]
 
 const days = [
   { id: "mon", label: "Thứ 2", shortLabel: "T2" },
@@ -67,92 +77,7 @@ interface CourseBlock {
   isOnline: boolean
 }
 
-const scheduleData: CourseBlock[] = [
-  {
-    id: "1",
-    name: "Lập trình Web",
-    code: "CS301",
-    instructor: "TS. Nguyễn Văn B",
-    room: "A101",
-    day: "mon",
-    startTime: "07:00",
-    endTime: "09:30",
-    color: "bg-blue-500",
-    isOnline: false,
-  },
-  {
-    id: "2",
-    name: "Cơ sở dữ liệu",
-    code: "CS302",
-    instructor: "ThS. Trần Thị C",
-    room: "B203",
-    day: "tue",
-    startTime: "13:00",
-    endTime: "15:30",
-    color: "bg-emerald-500",
-    isOnline: false,
-  },
-  {
-    id: "3",
-    name: "Mạng máy tính",
-    code: "CS303",
-    instructor: "PGS.TS. Lê Văn D",
-    room: "C305",
-    day: "thu",
-    startTime: "09:45",
-    endTime: "12:15",
-    color: "bg-amber-500",
-    isOnline: false,
-  },
-  {
-    id: "4",
-    name: "Trí tuệ nhân tạo",
-    code: "CS401",
-    instructor: "TS. Phạm Thị E",
-    room: "Online",
-    day: "fri",
-    startTime: "07:00",
-    endTime: "09:30",
-    color: "bg-rose-500",
-    isOnline: true,
-  },
-  {
-    id: "5",
-    name: "Kiểm thử phần mềm",
-    code: "CS304",
-    instructor: "ThS. Hoàng Văn F",
-    room: "D102",
-    day: "wed",
-    startTime: "14:00",
-    endTime: "16:30",
-    color: "bg-violet-500",
-    isOnline: false,
-  },
-  {
-    id: "6",
-    name: "An toàn thông tin",
-    code: "CS402",
-    instructor: "TS. Vũ Thị G",
-    room: "A205",
-    day: "mon",
-    startTime: "13:00",
-    endTime: "15:30",
-    color: "bg-cyan-500",
-    isOnline: false,
-  },
-  {
-    id: "7",
-    name: "Phát triển ứng dụng di động",
-    code: "CS403",
-    instructor: "ThS. Đặng Văn H",
-    room: "Online",
-    day: "sat",
-    startTime: "08:00",
-    endTime: "11:00",
-    color: "bg-orange-500",
-    isOnline: true,
-  },
-]
+// Mock scheduleData removed. Will be loaded from API.
 
 function getTimePosition(time: string): number {
   const [hours, minutes] = time.split(":").map(Number)
@@ -170,6 +95,72 @@ export default function TimetablePage() {
   const [currentWeek, setCurrentWeek] = useState("20/05/2024 - 26/05/2024")
   const [selectedSemester, setSelectedSemester] = useState("hk2-2024")
   const [selectedCourse, setSelectedCourse] = useState<CourseBlock | null>(null)
+  const [scheduleData, setScheduleData] = useState<CourseBlock[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchSchedule = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const profile = await AuthService.getProfile();
+        if (!profile.maSinhVien) throw new Error("Không tìm thấy thông tin sinh viên");
+
+        const [dangKyList, lhpList, monHocRes] = await Promise.all([
+          DangKyService.getDangKyBySinhVien(profile.maSinhVien),
+          LopHocPhanService.getAllLopHocPhan(),
+          api.get<MonHocApi[]>("/monhoc")
+        ]);
+        
+        const monHocList = monHocRes.data;
+        const activeDangKy = dangKyList;
+        
+        const blocks: CourseBlock[] = [];
+        activeDangKy.forEach((dk, index) => {
+          const lhp = lhpList.find(l => l.maLHP === dk.maLopHocPhan);
+          if (!lhp) return;
+          const mon = monHocList.find(m => m.maMH === lhp.maMH);
+          if (!mon) return;
+
+          const dayMap: Record<number, string> = { 2: "mon", 3: "tue", 4: "wed", 5: "thu", 6: "fri", 7: "sat" };
+          const dayId = lhp.thu && dayMap[lhp.thu] ? dayMap[lhp.thu] : "mon";
+          
+          const isMorning = (lhp.thu || 2) % 2 === 0;
+          const startTime = isMorning ? "07:00" : "13:00";
+          const soTiet = lhp.soTiet || 3;
+          const startHour = isMorning ? 7 : 13;
+          const endHour = startHour + Math.floor((soTiet * 50) / 60);
+          const endMinute = (soTiet * 50) % 60;
+          const endTime = `${String(endHour).padStart(2, "0")}:${String(endMinute).padStart(2, "0")}`;
+
+          blocks.push({
+            id: dk.maLopHocPhan,
+            name: mon.tenMH,
+            code: mon.maMH,
+            instructor: "—", 
+            room: "—",
+            day: dayId,
+            startTime,
+            endTime,
+            color: COLORS[index % COLORS.length],
+            isOnline: false
+          });
+        });
+
+        if (isMounted) setScheduleData(blocks);
+      } catch (err) {
+        if (isMounted) setError("Không thể tải thời khóa biểu. Vui lòng thử lại sau.");
+        console.error(err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    fetchSchedule();
+    return () => { isMounted = false; };
+  }, [selectedSemester]);
 
   const hourHeight = 60
 
@@ -212,7 +203,31 @@ export default function TimetablePage() {
             </div>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          {error && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Lỗi</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {isLoading ? (
+            <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+              <Skeleton className="h-[600px] w-full rounded-xl" />
+              <div className="space-y-6">
+                <Skeleton className="h-[200px] w-full rounded-xl" />
+                <Skeleton className="h-[150px] w-full rounded-xl" />
+                <Skeleton className="h-[150px] w-full rounded-xl" />
+              </div>
+            </div>
+          ) : scheduleData.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-12 bg-muted/20 rounded-xl border border-dashed">
+              <Calendar className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
+              <h3 className="text-lg font-medium text-foreground mb-1">Chưa có lịch học</h3>
+              <p className="text-sm text-muted-foreground text-center">Bạn chưa đăng ký môn học nào trong học kỳ này.</p>
+            </div>
+          ) : (
+            <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
             {/* Main Calendar */}
             <Card className="overflow-hidden">
               <CardHeader className="border-b bg-muted/30 py-4">
@@ -479,6 +494,7 @@ export default function TimetablePage() {
               </Card>
             </div>
           </div>
+          )}
         </main>
       </div>
     </div>

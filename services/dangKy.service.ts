@@ -46,6 +46,14 @@ const DangKyService = {
     }
   },
 
+  rutMon: async (id: string): Promise<void> => {
+    try {
+      await api.delete(`/dangky/rut-mon/${id}`);
+    } catch (error) {
+      throw error;
+    }
+  },
+
   getDangKyBySinhVien: async (maSinhVien: string): Promise<DangKy[]> => {
     try {
       const response = await api.get<DangKy[]>(`/dangky/sinhvien/${maSinhVien}`);

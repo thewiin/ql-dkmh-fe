@@ -96,7 +96,7 @@ export default function TuitionPage() {
         setIsLoading(true)
         setError(null)
         const profile = await AuthService.getProfile()
-        const data = await PaymentService.getTuitionSummary()
+        const data = await PaymentService.getTuitionSummary(profile.maSinhVien)
         setTuitionSummary(data)
         setCourseTuition(data.courseTuition || [])
         setOtherFees(data.otherFees || [])

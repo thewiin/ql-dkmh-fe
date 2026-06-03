@@ -1,9 +1,8 @@
-
 import axios from "axios";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5186/api";
 
-const api = axios.create({
+const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
@@ -20,12 +19,14 @@ const clearAuthAndRedirect = () => {
   window.location.href = "/login";
 };
 
-// Request interceptor for adding JWT token
-api.interceptors.request.use(
+// Request interceptor: attach JWT token
+axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("jwt_token"); // Assuming JWT is stored in localStorage
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("jwt_token");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
@@ -34,8 +35,8 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for handling errors
-api.interceptors.response.use(
+// Response interceptor: handle 401 Unauthorized
+axiosInstance.interceptors.response.use(
   (response) => {
     return response;
   },
@@ -44,10 +45,15 @@ api.interceptors.response.use(
       if (!isHandlingUnauthorized) {
         isHandlingUnauthorized = true;
         clearAuthAndRedirect();
+        
+        // Reset flag after a short delay in case of multiple simultaneous 401s
+        setTimeout(() => {
+          isHandlingUnauthorized = false;
+        }, 1000);
       }
     }
     return Promise.reject(error);
   }
 );
 
-export default api;
+export default axiosInstance;

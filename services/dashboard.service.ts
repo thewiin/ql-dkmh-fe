@@ -7,6 +7,8 @@ import {
   ScheduleItemViewModel,
   SinhVienMe,
   StatsCardViewModel,
+  StudentDashboardResponse,
+  AdminDashboardResponse,
 } from "../types";
 
 const MA_SINH_VIEN_KEY = "ma_sinh_vien";
@@ -90,30 +92,23 @@ async function fetchStudentContext(): Promise<{
 
 const DashboardService = {
   // Admin Dashboard APIs
-  getAdminStats: async (): Promise<{
-    totalStudents: number;
-    totalCourses: number;
-    totalClasses: number;
-    totalRegistrations: number;
-  }> => {
+  getAdminDashboard: async (): Promise<AdminDashboardResponse> => {
     try {
-      const [studentsRes, coursesRes, classesRes, registrationsRes] = await Promise.all([
-        api.get<{ total: number }>("/admin/stats/students"),
-        api.get<{ total: number }>("/admin/stats/courses"),
-        api.get<{ total: number }>("/admin/stats/classes"),
-        api.get<{ total: number }>("/admin/stats/registrations"),
-      ]);
-
-      return {
-        totalStudents: studentsRes.data.total,
-        totalCourses: coursesRes.data.total,
-        totalClasses: classesRes.data.total,
-        totalRegistrations: registrationsRes.data.total,
-      };
+      const response = await api.get<AdminDashboardResponse>("/dashboard/admin");
+      return response.data;
     } catch (error) {
-      console.error("Error fetching admin stats:", error);
+      console.error("Error fetching admin dashboard:", error);
       throw error;
     }
+  },
+
+  getCurrentStudentId: async (): Promise<string> => {
+    return await resolveMaSv();
+  },
+
+  getStudentDashboard: async (id: string): Promise<StudentDashboardResponse> => {
+    const response = await api.get<StudentDashboardResponse>(`/dashboard/student/${id}`);
+    return response.data;
   },
 
   getStatsCards: async (): Promise<StatsCardViewModel[]> => {

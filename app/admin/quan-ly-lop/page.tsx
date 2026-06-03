@@ -1,10 +1,11 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { AdminSidebar } from "@/components/admin/admin-sidebar"
 import { AdminHeader } from "@/components/admin/admin-header"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { MergeClassDialog } from "@/components/admin/merge-class-dialog"
+import { ClassFormDialog } from "@/components/admin/class-form-dialog"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -62,8 +63,10 @@ import {
    Copy,
    GitMerge,
  } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
+import api from "@/lib/api"
 import LopHocPhanService from "@/services/lopHocPhan.service"
-import type { LopHocPhanApi } from "@/types"
+import type { LopHocPhanApi, MonHocApi } from "@/types"
 
 interface ClassSection {
   id: string
@@ -83,179 +86,6 @@ interface ClassSection {
   credits: number
 }
 
-const initialClasses: ClassSection[] = [
-  {
-    id: "1",
-    courseCode: "CS101",
-    courseName: "Nhập môn Lập trình",
-    section: "01",
-    instructor: "TS. Nguyễn Văn A",
-    instructorId: "GV001",
-    schedule: "Thứ 2, 4 | 07:00-09:30",
-    room: "A101",
-    capacity: 45,
-    enrolled: 45,
-    waitlist: 8,
-    status: "closed",
-    semester: "HK2 2024",
-    department: "Công nghệ thông tin",
-    credits: 3,
-  },
-  {
-    id: "2",
-    courseCode: "CS101",
-    courseName: "Nhập môn Lập trình",
-    section: "02",
-    instructor: "ThS. Trần Thị B",
-    instructorId: "GV002",
-    schedule: "Thứ 3, 5 | 13:00-15:30",
-    room: "A102",
-    capacity: 45,
-    enrolled: 38,
-    waitlist: 0,
-    status: "open",
-    semester: "HK2 2024",
-    department: "Công nghệ thông tin",
-    credits: 3,
-  },
-  {
-    id: "3",
-    courseCode: "CS201",
-    courseName: "Cấu trúc dữ liệu",
-    section: "01",
-    instructor: "PGS.TS. Lê Văn C",
-    instructorId: "GV003",
-    schedule: "Thứ 2, 4 | 09:45-12:15",
-    room: "B201",
-    capacity: 40,
-    enrolled: 40,
-    waitlist: 12,
-    status: "locked",
-    semester: "HK2 2024",
-    department: "Công nghệ thông tin",
-    credits: 4,
-  },
-  {
-    id: "4",
-    courseCode: "CS301",
-    courseName: "Cơ sở dữ liệu",
-    section: "01",
-    instructor: null,
-    instructorId: null,
-    schedule: "Thứ 3, 5 | 07:00-09:30",
-    room: "C305",
-    capacity: 35,
-    enrolled: 0,
-    waitlist: 0,
-    status: "open",
-    semester: "HK2 2024",
-    department: "Công nghệ thông tin",
-    credits: 3,
-  },
-  {
-    id: "5",
-    courseCode: "MATH201",
-    courseName: "Giải tích 2",
-    section: "01",
-    instructor: "TS. Phạm Văn D",
-    instructorId: "GV004",
-    schedule: "Thứ 2, 4, 6 | 13:00-14:30",
-    room: "D102",
-    capacity: 50,
-    enrolled: 42,
-    waitlist: 0,
-    status: "open",
-    semester: "HK2 2024",
-    department: "Toán học",
-    credits: 3,
-  },
-  {
-    id: "6",
-    courseCode: "CS401",
-    courseName: "Trí tuệ nhân tạo",
-    section: "01",
-    instructor: "PGS.TS. Hoàng Văn E",
-    instructorId: "GV005",
-    schedule: "Thứ 5 | 07:00-09:30",
-    room: "A201",
-    capacity: 30,
-    enrolled: 30,
-    waitlist: 15,
-    status: "closed",
-    semester: "HK2 2024",
-    department: "Công nghệ thông tin",
-    credits: 3,
-  },
-  {
-    id: "7",
-    courseCode: "ENG101",
-    courseName: "Tiếng Anh cơ bản",
-    section: "01",
-    instructor: "ThS. Ngô Thị F",
-    instructorId: "GV006",
-    schedule: "Thứ 2, 4 | 15:45-17:15",
-    room: "E101",
-    capacity: 35,
-    enrolled: 28,
-    waitlist: 0,
-    status: "open",
-    semester: "HK2 2024",
-    department: "Ngoại ngữ",
-    credits: 2,
-  },
-  {
-    id: "8",
-    courseCode: "CS302",
-    courseName: "Mạng máy tính",
-    section: "01",
-    instructor: "TS. Vũ Văn G",
-    instructorId: "GV007",
-    schedule: "Thứ 3, 5 | 09:45-12:15",
-    room: "LAB01",
-    capacity: 25,
-    enrolled: 25,
-    waitlist: 5,
-    status: "locked",
-    semester: "HK2 2024",
-    department: "Công nghệ thông tin",
-    credits: 3,
-  },
-  {
-    id: "9",
-    courseCode: "PHY101",
-    courseName: "Vật lý đại cương",
-    section: "01",
-    instructor: null,
-    instructorId: null,
-    schedule: "Thứ 6 | 07:00-11:30",
-    room: "F201",
-    capacity: 60,
-    enrolled: 0,
-    waitlist: 0,
-    status: "cancelled",
-    semester: "HK2 2024",
-    department: "Vật lý",
-    credits: 4,
-  },
-  {
-    id: "10",
-    courseCode: "CS501",
-    courseName: "Machine Learning",
-    section: "01",
-    instructor: "PGS.TS. Hoàng Văn E",
-    instructorId: "GV005",
-    schedule: "Thứ 6 | 13:00-17:15",
-    room: "LAB02",
-    capacity: 25,
-    enrolled: 22,
-    waitlist: 3,
-    status: "open",
-    semester: "HK2 2024",
-    department: "Công nghệ thông tin",
-    credits: 3,
-  },
-]
-
 const instructors = [
   { id: "GV001", name: "TS. Nguyễn Văn A", department: "CNTT" },
   { id: "GV002", name: "ThS. Trần Thị B", department: "CNTT" },
@@ -267,9 +97,12 @@ const instructors = [
   { id: "GV008", name: "TS. Đỗ Văn H", department: "CNTT" },
 ]
 
+// Mock initialClasses removed.
+
 export default function ClassManagementPage() {
-  const [classes, setClasses] = useState<ClassSection[]>(initialClasses)
+  const [classes, setClasses] = useState<ClassSection[]>([])
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [departmentFilter, setDepartmentFilter] = useState<string>("all")
@@ -283,6 +116,12 @@ export default function ClassManagementPage() {
   const [defaultMergeTargetClassId, setDefaultMergeTargetClassId] = useState<string>("")
   const [mergeCandidates, setMergeCandidates] = useState<LopHocPhanApi[]>([])
   const [isMergeLoading, setIsMergeLoading] = useState(false)
+  
+  const [formDialogOpen, setFormDialogOpen] = useState(false)
+  const [editingApiClass, setEditingApiClass] = useState<LopHocPhanApi | null>(null)
+  const [apiClasses, setApiClasses] = useState<LopHocPhanApi[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
   const filteredClasses = classes.filter((cls) => {
     const matchesSearch =
@@ -293,6 +132,12 @@ export default function ClassManagementPage() {
     const matchesDepartment = departmentFilter === "all" || cls.department === departmentFilter
     return matchesSearch && matchesStatus && matchesDepartment
   })
+
+  const totalPages = Math.ceil(filteredClasses.length / itemsPerPage)
+  const paginatedClasses = filteredClasses.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
 
   const stats = {
     total: classes.length,
@@ -370,46 +215,59 @@ export default function ClassManagementPage() {
     setClasses((prev) => [...prev, newClass])
   }
 
-  const deleteClass = () => {
+  const deleteClass = async () => {
     if (!selectedClass) return
-    setClasses((prev) => prev.filter((cls) => cls.id !== selectedClass.id))
-    setDeleteDialogOpen(false)
-    setSelectedClass(null)
-  }
-
-  const mapApiToClassSection = (item: LopHocPhanApi): ClassSection => {
-    const currentClass = classes.find((cls) => cls.id === item.maLHP)
-    return {
-      id: item.maLHP,
-      courseCode: item.maMH,
-      courseName: currentClass?.courseName ?? item.maMH,
-      section: currentClass?.section ?? "01",
-      instructor: currentClass?.instructor ?? null,
-      instructorId: currentClass?.instructorId ?? null,
-      schedule: currentClass?.schedule ?? "-",
-      room: currentClass?.room ?? "-",
-      capacity: item.siSoToiDa,
-      enrolled: item.siSoHienTai,
-      waitlist: currentClass?.waitlist ?? 0,
-      status:
-        item.trangThai === "open" || item.trangThai === "closed" || item.trangThai === "locked"
-          ? item.trangThai
-          : "cancelled",
-      semester: `${item.namHoc}`,
-      department: currentClass?.department ?? "-",
-      credits: currentClass?.credits ?? 0,
+    try {
+      await LopHocPhanService.deleteLopHocPhan(selectedClass.id)
+      await refreshClasses()
+      setDeleteDialogOpen(false)
+      setSelectedClass(null)
+    } catch (error) {
+      console.error("Lỗi khi xóa lớp học phần:", error)
+      alert("Đã xảy ra lỗi khi xóa lớp học phần.")
     }
   }
 
   const refreshClasses = async () => {
     setIsRefreshing(true)
     try {
-      const apiClasses = await LopHocPhanService.getAllLopHocPhan()
-      setClasses(apiClasses.map(mapApiToClassSection))
+      const [apiClassesData, monHocRes] = await Promise.all([
+        LopHocPhanService.getAllLopHocPhan(),
+        api.get<MonHocApi[]>("/monhoc")
+      ])
+      const monHocList = monHocRes.data
+      setApiClasses(apiClassesData)
+      setClasses(apiClassesData.map(item => {
+        const mon = monHocList.find(m => m.maMH === item.maMH)
+        return {
+          id: item.maLHP,
+          courseCode: item.maMH,
+          courseName: mon?.tenMH ?? item.maMH,
+          section: "01",
+          instructor: "—",
+          instructorId: "—",
+          schedule: item.thu && item.soTiet ? `Thứ ${item.thu} | ${item.soTiet} tiết` : "—",
+          room: "—",
+          capacity: item.siSoToiDa,
+          enrolled: item.siSoHienTai,
+          waitlist: 0,
+          status: (item.trangThai === "open" || item.trangThai === "closed" || item.trangThai === "locked") ? item.trangThai as any : "cancelled",
+          semester: `HK${item.hocKy} ${item.namHoc}`,
+          department: mon?.khoa ?? "—",
+          credits: mon?.soTinChi ?? 0,
+        }
+      }))
+    } catch (error) {
+      console.error("Lỗi khi tải danh sách lớp:", error)
     } finally {
       setIsRefreshing(false)
+      setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    refreshClasses()
+  }, [])
 
   const openMergeDialog = async (targetClassId: string) => {
     setIsMergeLoading(true)
@@ -490,7 +348,10 @@ export default function ClassManagementPage() {
                   <Download className="h-4 w-4 mr-2" />
                   Export
                 </Button>
-                <Button size="sm" className="bg-primary">
+                <Button size="sm" className="bg-primary" onClick={() => {
+                  setEditingApiClass(null)
+                  setFormDialogOpen(true)
+                }}>
                   <Plus className="h-4 w-4 mr-2" />
                   Thêm lớp mới
                 </Button>
@@ -668,6 +529,11 @@ export default function ClassManagementPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {isLoading ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-[400px] w-full rounded-lg" />
+                  </div>
+                ) : (
                 <div className="rounded-lg border overflow-hidden">
                   <Table>
                     <TableHeader>
@@ -684,7 +550,7 @@ export default function ClassManagementPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredClasses.map((cls) => (
+                      {paginatedClasses.map((cls) => (
                         <TableRow
                           key={cls.id}
                           className={cls.status === "cancelled" ? "opacity-50" : ""}
@@ -790,8 +656,9 @@ export default function ClassManagementPage() {
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuItem
                                     onClick={() => {
-                                      setSelectedClass(cls)
-                                      setEditDialogOpen(true)
+                                      const apiItem = apiClasses.find(a => a.maLHP === cls.id) || null
+                                      setEditingApiClass(apiItem)
+                                      setFormDialogOpen(true)
                                     }}
                                   >
                                     <Edit className="h-4 w-4 mr-2" />
@@ -839,24 +706,48 @@ export default function ClassManagementPage() {
                     </TableBody>
                   </Table>
                 </div>
+                )}
 
                 {/* Pagination */}
+                {totalPages > 1 && !isLoading && (
                 <div className="flex items-center justify-between mt-4">
                   <p className="text-sm text-muted-foreground">
-                    Hiển thị 1-{filteredClasses.length} của {filteredClasses.length} kết quả
+                    Hiển thị {filteredClasses.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}-
+                    {Math.min(currentPage * itemsPerPage, filteredClasses.length)} của {filteredClasses.length} kết quả
                   </p>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" disabled>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    >
                       Trước
                     </Button>
-                    <Button variant="outline" size="sm" className="bg-primary text-primary-foreground">
-                      1
-                    </Button>
-                    <Button variant="outline" size="sm" disabled>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          className={currentPage === page ? "bg-primary text-primary-foreground" : ""}
+                          onClick={() => setCurrentPage(page)}
+                        >
+                          {page}
+                        </Button>
+                      ))}
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      disabled={currentPage === totalPages || totalPages === 0}
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    >
                       Sau
                     </Button>
                   </div>
                 </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -936,6 +827,13 @@ export default function ClassManagementPage() {
         defaultTargetClassId={defaultMergeTargetClassId}
         lockTargetClass
         onMerge={handleMergeClass}
+      />
+
+      <ClassFormDialog
+        open={formDialogOpen}
+        onOpenChange={setFormDialogOpen}
+        onSuccess={refreshClasses}
+        editingClass={editingApiClass}
       />
     </div>
     </ProtectedRoute>

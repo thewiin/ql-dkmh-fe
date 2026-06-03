@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { ProtectedRoute } from "@/components/auth/protected-route"
@@ -57,7 +57,11 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
+  Loader2,
 } from "lucide-react"
+
+import AuthService from "@/services/auth.service"
+import KetQuaHocTapService from "@/services/ketQuaHocTap.service"
 
 // GPA data by semester
 const gpaHistory = [
@@ -88,119 +92,18 @@ const skillsData = [
   { skill: "Web Dev", value: 88, fullMark: 100 },
 ]
 
-// Course results data
-const courseResults = [
-  {
-    id: "CS101",
-    name: "Nhập môn lập trình",
-    credits: 3,
-    midterm: 8.5,
-    final: 9.0,
-    average: 8.8,
-    letterGrade: "A",
-    status: "passed",
-    semester: "HK1 2021",
-  },
-  {
-    id: "CS102",
-    name: "Cấu trúc dữ liệu và giải thuật",
-    credits: 4,
-    midterm: 7.5,
-    final: 8.5,
-    average: 8.1,
-    letterGrade: "B+",
-    status: "passed",
-    semester: "HK2 2021",
-  },
-  {
-    id: "CS201",
-    name: "Lập trình hướng đối tượng",
-    credits: 3,
-    midterm: 9.0,
-    final: 9.5,
-    average: 9.3,
-    letterGrade: "A",
-    status: "passed",
-    semester: "HK1 2022",
-  },
-  {
-    id: "CS202",
-    name: "Cơ sở dữ liệu",
-    credits: 4,
-    midterm: 8.0,
-    final: 8.5,
-    average: 8.3,
-    letterGrade: "B+",
-    status: "passed",
-    semester: "HK2 2022",
-  },
-  {
-    id: "CS301",
-    name: "Lập trình Web",
-    credits: 3,
-    midterm: 9.5,
-    final: 9.0,
-    average: 9.2,
-    letterGrade: "A",
-    status: "passed",
-    semester: "HK1 2023",
-  },
-  {
-    id: "CS302",
-    name: "Trí tuệ nhân tạo",
-    credits: 3,
-    midterm: 7.0,
-    final: 8.0,
-    average: 7.6,
-    letterGrade: "B",
-    status: "passed",
-    semester: "HK1 2023",
-  },
-  {
-    id: "CS303",
-    name: "Mạng máy tính",
-    credits: 3,
-    midterm: 6.5,
-    final: 7.5,
-    average: 7.1,
-    letterGrade: "B",
-    status: "passed",
-    semester: "HK2 2023",
-  },
-  {
-    id: "CS304",
-    name: "An toàn thông tin",
-    credits: 3,
-    midterm: 8.5,
-    final: 9.0,
-    average: 8.8,
-    letterGrade: "A",
-    status: "passed",
-    semester: "HK2 2023",
-  },
-  {
-    id: "CS305",
-    name: "Phát triển ứng dụng di động",
-    credits: 3,
-    midterm: null,
-    final: null,
-    average: null,
-    letterGrade: null,
-    status: "in_progress",
-    semester: "HK1 2024",
-  },
-  {
-    id: "CS306",
-    name: "Học máy",
-    credits: 3,
-    midterm: 7.5,
-    final: null,
-    average: null,
-    letterGrade: null,
-    status: "in_progress",
-    semester: "HK1 2024",
-  },
-]
+// Initial course results data removed, will be fetched from API
+interface CourseResult {
+  id: string;
+  name: string;
+  credits: number;
+  midterm: number | null;
+  final: number | null;
+  average: number | null;
+  letterGrade: string | null;
+  status: string;
+  semester: string;
+}
 
 // Semesters for filter
 const semesters = [
@@ -225,6 +128,56 @@ const creditsByCategory = [
 
 export default function AcademicResultsPage() {
   const [selectedSemester, setSelectedSemester] = useState("all")
+  const [courseResults, setCourseResults] = useState<CourseResult[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true)
+        const profile = await AuthService.getProfile()
+        if (profile.maSinhVien) {
+          const results = await KetQuaHocTapService.getKetQuaHocTap(profile.maSinhVien)
+          const mappedResults = results.map(item => {
+            let letterGrade = null;
+            if (item.diem !== null) {
+              if (item.diem >= 8.5) letterGrade = "A";
+              else if (item.diem >= 8.0) letterGrade = "B+";
+              else if (item.diem >= 7.0) letterGrade = "B";
+              else if (item.diem >= 6.5) letterGrade = "C+";
+              else if (item.diem >= 5.5) letterGrade = "C";
+              else if (item.diem >= 5.0) letterGrade = "D+";
+              else if (item.diem >= 4.0) letterGrade = "D";
+              else letterGrade = "F";
+            }
+            
+            let status = "in_progress";
+            if (item.trangThai === "QuaMon") status = "passed";
+            if (item.trangThai === "RotMon") status = "failed";
+            
+            return {
+              id: item.maMH,
+              name: item.tenMH,
+              credits: 3, // Default since API doesn't provide
+              midterm: item.diem,
+              final: item.diem,
+              average: item.diem,
+              letterGrade,
+              status,
+              semester: "HK2 2024", // Default since API doesn't provide
+            };
+          });
+          setCourseResults(mappedResults)
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Không thể tải dữ liệu")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
 
   const filteredCourses =
     selectedSemester === "all"
@@ -283,6 +236,81 @@ export default function AcademicResultsPage() {
 
   const totalCreditsRequired = 126
 
+  const calculateGPA = () => {
+    let totalPoints = 0;
+    let totalCreditsForGPA = 0;
+    
+    courseResults.forEach(c => {
+      if (c.status === "passed" || c.status === "failed") {
+        let point = 0;
+        if (c.letterGrade === "A") point = 4.0;
+        else if (c.letterGrade === "B+") point = 3.5;
+        else if (c.letterGrade === "B") point = 3.0;
+        else if (c.letterGrade === "C+") point = 2.5;
+        else if (c.letterGrade === "C") point = 2.0;
+        else if (c.letterGrade === "D+") point = 1.5;
+        else if (c.letterGrade === "D") point = 1.0;
+        else point = 0;
+        
+        totalPoints += point * c.credits;
+        totalCreditsForGPA += c.credits;
+      }
+    });
+    
+    return totalCreditsForGPA === 0 ? "0.00" : (totalPoints / totalCreditsForGPA).toFixed(2);
+  };
+  
+  const currentGPA = calculateGPA();
+
+  const dynamicGradeDistribution = [
+    { grade: "A", count: courseResults.filter(c => c.letterGrade === "A").length, color: "#22c55e" },
+    { grade: "B+", count: courseResults.filter(c => c.letterGrade === "B+").length, color: "#3b82f6" },
+    { grade: "B", count: courseResults.filter(c => c.letterGrade === "B").length, color: "#6366f1" },
+    { grade: "C+", count: courseResults.filter(c => c.letterGrade === "C+").length, color: "#f59e0b" },
+    { grade: "C", count: courseResults.filter(c => c.letterGrade === "C").length, color: "#ef4444" },
+    { grade: "F", count: courseResults.filter(c => c.letterGrade === "F").length, color: "#b91c1c" },
+  ].filter(g => g.count > 0);
+
+  const displayGradeDistribution = dynamicGradeDistribution.length > 0 ? dynamicGradeDistribution : gradeDistribution;
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar activePage="ket-qua" />
+        <div className="flex-1 flex flex-col">
+          <Header />
+          <main className="flex-1 p-6 overflow-auto flex items-center justify-center">
+            <div className="text-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
+              <p className="text-muted-foreground">Đang tải dữ liệu kết quả học tập...</p>
+            </div>
+          </main>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <Sidebar activePage="ket-qua" />
+        <div className="flex-1 flex flex-col">
+          <Header />
+          <main className="flex-1 p-6 overflow-auto flex items-center justify-center">
+            <Card className="border-0 shadow-sm max-w-md">
+              <CardContent className="p-8 text-center">
+                <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-3" />
+                <h3 className="text-lg font-semibold mb-2">Lỗi</h3>
+                <p className="text-muted-foreground mb-4">{error}</p>
+                <Button onClick={() => window.location.reload()}>Thử lại</Button>
+              </CardContent>
+            </Card>
+          </main>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <ProtectedRoute requiredRole="student">
     <div className="flex min-h-screen bg-background">
@@ -324,7 +352,7 @@ export default function AcademicResultsPage() {
                     <p className="text-sm text-muted-foreground mb-1">
                       GPA tích lũy
                     </p>
-                    <p className="text-3xl font-bold text-foreground">3.85</p>
+                    <p className="text-3xl font-bold text-foreground">{currentGPA}</p>
                     <div className="flex items-center gap-1 mt-1">
                       <TrendingUp className="h-3 w-3 text-emerald-600" />
                       <span className="text-xs text-emerald-600">
@@ -375,7 +403,7 @@ export default function AcademicResultsPage() {
                     <p className="text-sm text-muted-foreground mb-1">
                       GPA học kỳ này
                     </p>
-                    <p className="text-3xl font-bold text-foreground">--</p>
+                    <p className="text-3xl font-bold text-foreground">{currentGPA}</p>
                     <div className="flex items-center gap-1 mt-1">
                       <Clock className="h-3 w-3 text-amber-600" />
                       <span className="text-xs text-amber-600">
@@ -516,7 +544,7 @@ export default function AcademicResultsPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={gradeDistribution}
+                        data={displayGradeDistribution}
                         cx="50%"
                         cy="50%"
                         innerRadius={50}
@@ -526,7 +554,7 @@ export default function AcademicResultsPage() {
                         label={({ grade, count }) => `${grade}: ${count}`}
                         labelLine={false}
                       >
-                        {gradeDistribution.map((entry, index) => (
+                        {displayGradeDistribution.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
@@ -535,7 +563,7 @@ export default function AcademicResultsPage() {
                         verticalAlign="bottom"
                         height={36}
                         formatter={(value, entry) => {
-                          const item = gradeDistribution.find(
+                          const item = displayGradeDistribution.find(
                             (g) => g.count === entry.payload?.value
                           )
                           return item?.grade || value

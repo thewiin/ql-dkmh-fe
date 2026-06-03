@@ -12,7 +12,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import DashboardService from "@/services/dashboard.service"
 import type { StatsCardViewModel } from "@/types"
 
 const STAT_ICONS = [
@@ -22,44 +21,17 @@ const STAT_ICONS = [
   { icon: CalendarCheck, iconBg: "bg-rose-100", iconColor: "text-rose-600" },
 ] as const
 
-type LoadState = "loading" | "error" | "empty" | "success"
+interface StatsCardsProps {
+  isLoading: boolean
+  error?: string
+  data?: StatsCardViewModel[]
+}
 
-export function StatsCards() {
-  const [state, setState] = useState<LoadState>("loading")
-  const [stats, setStats] = useState<StatsCardViewModel[]>([])
-  const [errorMessage, setErrorMessage] = useState<string>("")
+export function StatsCards({ isLoading, error, data }: StatsCardsProps) {
+  const isError = !!error
+  const isEmpty = !data || data.length === 0
 
-  useEffect(() => {
-    let cancelled = false
-
-    async function load() {
-      setState("loading")
-      setErrorMessage("")
-      try {
-        const data = await DashboardService.getStatsCards()
-        if (cancelled) return
-        if (data.length === 0) {
-          setState("empty")
-          return
-        }
-        setStats(data)
-        setState("success")
-      } catch {
-        if (cancelled) return
-        setErrorMessage(
-          "Không thể tải thống kê. Vui lòng đăng nhập lại hoặc thử sau."
-        )
-        setState("error")
-      }
-    }
-
-    void load()
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  if (state === "loading") {
+  if (isLoading) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {STAT_ICONS.map((_, index) => (
@@ -75,17 +47,17 @@ export function StatsCards() {
     )
   }
 
-  if (state === "error") {
+  if (isError) {
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Lỗi tải dữ liệu</AlertTitle>
-        <AlertDescription>{errorMessage}</AlertDescription>
+        <AlertDescription>{error}</AlertDescription>
       </Alert>
     )
   }
 
-  if (state === "empty") {
+  if (isEmpty) {
     return (
       <Empty className="border border-dashed border-border">
         <EmptyHeader>
@@ -103,7 +75,7 @@ export function StatsCards() {
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {stats.map((stat, index) => {
+      {data!.map((stat, index) => {
         const iconConfig = STAT_ICONS[index] ?? STAT_ICONS[0]
         const Icon = iconConfig.icon
         return (

@@ -12,45 +12,18 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import DashboardService from "@/services/dashboard.service"
 import type { ScheduleItemViewModel } from "@/types"
 
-type LoadState = "loading" | "error" | "empty" | "success"
+interface SchedulePanelProps {
+  isLoading: boolean
+  error?: string
+  data?: ScheduleItemViewModel[]
+}
 
-export function SchedulePanel() {
-  const [state, setState] = useState<LoadState>("loading")
-  const [scheduleItems, setScheduleItems] = useState<ScheduleItemViewModel[]>([])
-  const [errorMessage, setErrorMessage] = useState<string>("")
+export function SchedulePanel({ isLoading, error, data }: SchedulePanelProps) {
+  const isError = !!error
+  const isEmpty = !data || data.length === 0
 
-  useEffect(() => {
-    let cancelled = false
-
-    async function load() {
-      setState("loading")
-      setErrorMessage("")
-      try {
-        const data = await DashboardService.getWeeklySchedule()
-        if (cancelled) return
-        if (data.length === 0) {
-          setState("empty")
-          return
-        }
-        setScheduleItems(data)
-        setState("success")
-      } catch {
-        if (cancelled) return
-        setErrorMessage(
-          "Không thể tải lịch học. Vui lòng đăng nhập lại hoặc thử sau."
-        )
-        setState("error")
-      }
-    }
-
-    void load()
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   return (
     <Card className="border-border bg-card">
@@ -61,20 +34,20 @@ export function SchedulePanel() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {state === "loading" &&
+        {isLoading &&
           Array.from({ length: 4 }).map((_, index) => (
             <Skeleton key={index} className="h-24 w-full rounded-lg" />
           ))}
 
-        {state === "error" && (
+        {isError && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Lỗi tải dữ liệu</AlertTitle>
-            <AlertDescription>{errorMessage}</AlertDescription>
+            <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
-        {state === "empty" && (
+        {!isLoading && !isError && isEmpty && (
           <Empty className="border border-dashed border-border py-8">
             <EmptyHeader>
               <EmptyMedia variant="icon">
@@ -89,8 +62,8 @@ export function SchedulePanel() {
           </Empty>
         )}
 
-        {state === "success" &&
-          scheduleItems.map((item, index) => (
+        {!isLoading && !isError && !isEmpty &&
+          data!.map((item, index) => (
             <div
               key={`${item.subject}-${index}`}
               className="rounded-lg border border-border bg-background p-4 transition-colors hover:bg-muted/50"

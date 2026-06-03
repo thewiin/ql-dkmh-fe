@@ -4,7 +4,7 @@ import { ChiTietLichHoc, LopHocPhan, LopHocPhanApi, CanMergeLopHocPhanResponse, 
 const LopHocPhanService = {
   getAllLopHocPhan: async (): Promise<LopHocPhanApi[]> => {
     try {
-      const response = await api.get<LopHocPhanApi[]>("/lophocphan");
+      const response = await api.get<LopHocPhanApi[]>("/LopHocPhan");
       return response.data;
     } catch (error) {
       throw error;
@@ -13,7 +13,7 @@ const LopHocPhanService = {
 
   getLopHocPhanById: async (id: string): Promise<LopHocPhanApi> => {
     try {
-      const response = await api.get<LopHocPhanApi>(`/lophocphan/${id}`);
+      const response = await api.get<LopHocPhanApi>(`/LopHocPhan/${id}`);
       return response.data;
     } catch (error) {
       throw error;
@@ -24,7 +24,7 @@ const LopHocPhanService = {
     lopHocPhanData: Omit<LopHocPhan, "maLopHocPhan" | "soLuongHienTai">
   ): Promise<LopHocPhanApi> => {
     try {
-      const response = await api.post<LopHocPhanApi>("/lophocphan", lopHocPhanData);
+      const response = await api.post<LopHocPhanApi>("/LopHocPhan", lopHocPhanData);
       return response.data;
     } catch (error) {
       throw error;
@@ -36,7 +36,7 @@ const LopHocPhanService = {
     lopHocPhanData: Partial<LopHocPhan>
   ): Promise<LopHocPhanApi> => {
     try {
-      const response = await api.put<LopHocPhanApi>(`/lophocphan/${id}`, lopHocPhanData);
+      const response = await api.put<LopHocPhanApi>(`/LopHocPhan/${id}`, lopHocPhanData);
       return response.data;
     } catch (error) {
       throw error;
@@ -45,7 +45,7 @@ const LopHocPhanService = {
 
   deleteLopHocPhan: async (id: string): Promise<void> => {
     try {
-      await api.delete(`/lophocphan/${id}`);
+      await api.delete(`/LopHocPhan/${id}`);
     } catch (error) {
       throw error;
     }
@@ -53,7 +53,7 @@ const LopHocPhanService = {
 
   getLopHocPhanByMonHoc: async (maMonHoc: string): Promise<LopHocPhanApi[]> => {
     try {
-      const response = await api.get<LopHocPhanApi[]>(`/lophocphan/monhoc/${maMonHoc}`);
+      const response = await api.get<LopHocPhanApi[]>(`/LopHocPhan/MonHoc/${maMonHoc}`);
       return response.data;
     } catch (error) {
       throw error;

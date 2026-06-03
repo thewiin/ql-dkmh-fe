@@ -63,229 +63,51 @@ import { AdminHeader } from "@/components/admin/admin-header"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import DashboardService from "@/services/dashboard.service"
 
-// Stats data
-const statsCards = [
-  {
-    title: "Tổng sinh viên",
-    value: "12,458",
-    change: "+256",
-    changePercent: "+2.1%",
-    trend: "up",
-    icon: Users,
-    color: "bg-blue-500",
-    description: "Học kỳ này",
-  },
-  {
-    title: "Lớp học phần mở",
-    value: "486",
-    change: "+32",
-    changePercent: "+7.0%",
-    trend: "up",
-    icon: BookOpen,
-    color: "bg-emerald-500",
-    description: "Đang hoạt động",
-  },
-  {
-    title: "Doanh thu học phí",
-    value: "45.2 tỷ",
-    change: "+3.8 tỷ",
-    changePercent: "+9.2%",
-    trend: "up",
-    icon: DollarSign,
-    color: "bg-amber-500",
-    description: "Tổng thu học kỳ",
-  },
-  {
-    title: "Đăng ký môn học",
-    value: "38,942",
-    change: "-1,245",
-    changePercent: "-3.1%",
-    trend: "down",
-    icon: GraduationCap,
-    color: "bg-violet-500",
-    description: "Lượt đăng ký",
-  },
-]
+// Mock data removed. Loading from API.
 
-// Registration trend data
-const registrationTrendData = [
-  { date: "01/01", registrations: 1200, cancellations: 45 },
-  { date: "02/01", registrations: 2100, cancellations: 78 },
-  { date: "03/01", registrations: 3400, cancellations: 120 },
-  { date: "04/01", registrations: 5200, cancellations: 180 },
-  { date: "05/01", registrations: 7800, cancellations: 210 },
-  { date: "06/01", registrations: 9500, cancellations: 245 },
-  { date: "07/01", registrations: 11200, cancellations: 280 },
-  { date: "08/01", registrations: 15600, cancellations: 320 },
-  { date: "09/01", registrations: 22400, cancellations: 380 },
-  { date: "10/01", registrations: 28900, cancellations: 420 },
-  { date: "11/01", registrations: 34200, cancellations: 450 },
-  { date: "12/01", registrations: 38942, cancellations: 486 },
-]
+import { AdminDashboardResponse } from "@/types";
 
-// Revenue data
-const revenueData = [
-  { month: "T1", revenue: 8.2, target: 7.5 },
-  { month: "T2", revenue: 6.5, target: 7.0 },
-  { month: "T3", revenue: 4.2, target: 5.0 },
-  { month: "T4", revenue: 3.8, target: 4.0 },
-  { month: "T5", revenue: 2.1, target: 2.5 },
-  { month: "T6", revenue: 1.5, target: 2.0 },
-  { month: "T7", revenue: 3.2, target: 3.0 },
-  { month: "T8", revenue: 5.8, target: 5.5 },
-  { month: "T9", revenue: 7.4, target: 7.0 },
-  { month: "T10", revenue: 2.5, target: 3.0 },
-]
-
-// Department distribution
-const departmentData = [
-  { name: "CNTT", students: 3245, color: "#3b82f6" },
-  { name: "Kinh tế", students: 2890, color: "#10b981" },
-  { name: "Ngoại ngữ", students: 1856, color: "#f59e0b" },
-  { name: "Điện - ĐT", students: 1645, color: "#8b5cf6" },
-  { name: "Cơ khí", students: 1420, color: "#ef4444" },
-  { name: "Xây dựng", students: 1402, color: "#06b6d4" },
-]
-
-// Recent registrations
-const recentRegistrations = [
-  {
-    id: "SV2024001",
-    name: "Nguyễn Văn An",
-    course: "CS101 - Lập trình Web",
-    time: "2 phút trước",
-    status: "success",
-  },
-  {
-    id: "SV2024156",
-    name: "Trần Thị Bình",
-    course: "BA201 - Quản trị học",
-    time: "5 phút trước",
-    status: "success",
-  },
-  {
-    id: "SV2024089",
-    name: "Lê Hoàng Cường",
-    course: "EE301 - Điện tử số",
-    time: "8 phút trước",
-    status: "pending",
-  },
-  {
-    id: "SV2024234",
-    name: "Phạm Minh Đức",
-    course: "ME201 - Cơ học vật liệu",
-    time: "12 phút trước",
-    status: "success",
-  },
-  {
-    id: "SV2024178",
-    name: "Hoàng Thị Em",
-    course: "CS201 - Cơ sở dữ liệu",
-    time: "15 phút trước",
-    status: "failed",
-  },
-]
-
-// Popular courses
-const popularCourses = [
-  { code: "CS101", name: "Lập trình Web", registered: 245, capacity: 250, percent: 98 },
-  { code: "BA201", name: "Quản trị học", registered: 198, capacity: 200, percent: 99 },
-  { code: "EN101", name: "Tiếng Anh cơ bản", registered: 312, capacity: 350, percent: 89 },
-  { code: "CS201", name: "Cơ sở dữ liệu", registered: 186, capacity: 200, percent: 93 },
-  { code: "MA101", name: "Giải tích 1", registered: 420, capacity: 500, percent: 84 },
-]
-
-// Recent activities
-const recentActivities = [
-  {
-    type: "registration",
-    icon: UserPlus,
-    title: "Sinh viên mới đăng ký",
-    description: "Nguyễn Văn An đăng ký môn Lập trình Web",
-    time: "2 phút trước",
-    color: "text-blue-500",
-    bgColor: "bg-blue-100",
-  },
-  {
-    type: "payment",
-    icon: DollarSign,
-    title: "Thanh toán học phí",
-    description: "Trần Thị Bình thanh toán 15,000,000đ",
-    time: "10 phút trước",
-    color: "text-emerald-500",
-    bgColor: "bg-emerald-100",
-  },
-  {
-    type: "class",
-    icon: BookOpen,
-    title: "Lớp học mới mở",
-    description: "CS301 - Trí tuệ nhân tạo (Nhóm 2)",
-    time: "30 phút trước",
-    color: "text-violet-500",
-    bgColor: "bg-violet-100",
-  },
-  {
-    type: "alert",
-    icon: AlertCircle,
-    title: "Cảnh báo hệ thống",
-    description: "Lớp BA201 đã đạt 99% sức chứa",
-    time: "1 giờ trước",
-    color: "text-amber-500",
-    bgColor: "bg-amber-100",
-  },
-  {
-    type: "cancel",
-    icon: XCircle,
-    title: "Hủy đăng ký",
-    description: "Lê Văn Cường hủy môn Vật lý đại cương",
-    time: "2 giờ trước",
-    color: "text-red-500",
-    bgColor: "bg-red-100",
-  },
-]
-
-// Payment status data
-const paymentStatusData = [
-  { status: "Đã thanh toán", value: 8245, color: "#10b981" },
-  { status: "Chưa thanh toán", value: 2890, color: "#ef4444" },
-  { status: "Thanh toán một phần", value: 1323, color: "#f59e0b" },
-]
-
-interface AdminStats {
-  totalStudents: number;
-  totalCourses: number;
-  totalClasses: number;
-  totalRegistrations: number;
+const getIcon = (iconName: string) => {
+  switch (iconName) {
+    case 'UserPlus': return UserPlus;
+    case 'DollarSign': return DollarSign;
+    case 'BookOpen': return BookOpen;
+    case 'AlertCircle': return AlertCircle;
+    case 'XCircle': return XCircle;
+    case 'Users': return Users;
+    case 'GraduationCap': return GraduationCap;
+    default: return Bell;
+  }
 }
 
 export default function AdminDashboardPage() {
-  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [dashboardData, setDashboardData] = useState<AdminDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchDashboardData = async () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await DashboardService.getAdminStats();
-        setStats(data);
+        const data = await DashboardService.getAdminDashboard();
+        setDashboardData(data);
       } catch (err) {
-        console.error("Error loading admin stats:", err);
+        console.error("Error loading admin dashboard:", err);
         setError("Không thể tải dữ liệu dashboard. Vui lòng thử lại.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStats();
+    fetchDashboardData();
   }, []);
 
   // Create dynamic stats cards with API data
   const dynamicStatsCards = [
     {
       title: "Tổng sinh viên",
-      value: stats?.totalStudents ? new Intl.NumberFormat("vi-VN").format(stats.totalStudents) : "—",
+      value: dashboardData?.stats?.totalStudents ? new Intl.NumberFormat("vi-VN").format(dashboardData.stats.totalStudents) : "—",
       change: "+256",
       changePercent: "+2.1%",
       trend: "up",
@@ -295,7 +117,7 @@ export default function AdminDashboardPage() {
     },
     {
       title: "Lớp học phần mở",
-      value: stats?.totalClasses ? new Intl.NumberFormat("vi-VN").format(stats.totalClasses) : "—",
+      value: dashboardData?.stats?.totalClasses ? new Intl.NumberFormat("vi-VN").format(dashboardData.stats.totalClasses) : "—",
       change: "+32",
       changePercent: "+7.0%",
       trend: "up",
@@ -305,7 +127,7 @@ export default function AdminDashboardPage() {
     },
     {
       title: "Tổng môn học",
-      value: stats?.totalCourses ? new Intl.NumberFormat("vi-VN").format(stats.totalCourses) : "—",
+      value: dashboardData?.stats?.totalCourses ? new Intl.NumberFormat("vi-VN").format(dashboardData.stats.totalCourses) : "—",
       change: "+3.8 tỷ",
       changePercent: "+9.2%",
       trend: "up",
@@ -315,7 +137,7 @@ export default function AdminDashboardPage() {
     },
     {
       title: "Đăng ký môn học",
-      value: stats?.totalRegistrations ? new Intl.NumberFormat("vi-VN").format(stats.totalRegistrations) : "—",
+      value: dashboardData?.stats?.totalRegistrations ? new Intl.NumberFormat("vi-VN").format(dashboardData.stats.totalRegistrations) : "—",
       change: "-1,245",
       changePercent: "-3.1%",
       trend: "down",
@@ -446,7 +268,7 @@ export default function AdminDashboardPage() {
               <CardContent>
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={registrationTrendData}>
+                    <AreaChart data={dashboardData?.charts?.registrationTrendData || []}>
                       <defs>
                         <linearGradient id="colorReg" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
@@ -499,7 +321,7 @@ export default function AdminDashboardPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={departmentData}
+                        data={dashboardData?.charts?.departmentData || []}
                         cx="50%"
                         cy="50%"
                         innerRadius={60}
@@ -508,7 +330,7 @@ export default function AdminDashboardPage() {
                         dataKey="students"
                         nameKey="name"
                       >
-                        {departmentData.map((entry, index) => (
+                        {(dashboardData?.charts?.departmentData || []).map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
@@ -550,7 +372,7 @@ export default function AdminDashboardPage() {
               <CardContent>
                 <div className="h-[280px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={revenueData} barGap={4}>
+                    <BarChart data={dashboardData?.charts?.revenueData || []} barGap={4}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                       <YAxis tick={{ fontSize: 12 }} />
@@ -593,7 +415,7 @@ export default function AdminDashboardPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={paymentStatusData}
+                        data={dashboardData?.charts?.paymentStatusData || []}
                         cx="50%"
                         cy="50%"
                         innerRadius={50}
@@ -602,7 +424,7 @@ export default function AdminDashboardPage() {
                         dataKey="value"
                         nameKey="status"
                       >
-                        {paymentStatusData.map((entry, index) => (
+                        {(dashboardData?.charts?.paymentStatusData || []).map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
@@ -615,7 +437,7 @@ export default function AdminDashboardPage() {
                   </ResponsiveContainer>
                 </div>
                 <div className="space-y-2 mt-4">
-                  {paymentStatusData.map((item, index) => (
+                  {(dashboardData?.charts?.paymentStatusData || []).map((item, index) => (
                     <div key={index} className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2">
                         <div
@@ -662,7 +484,7 @@ export default function AdminDashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recentRegistrations.map((reg, index) => (
+                    {(dashboardData?.summaries?.recentRegistrations || []).map((reg, index) => (
                       <TableRow key={index}>
                         <TableCell className="font-medium">{reg.id}</TableCell>
                         <TableCell>{reg.name}</TableCell>
@@ -722,8 +544,8 @@ export default function AdminDashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentActivities.map((activity, index) => {
-                    const Icon = activity.icon
+                  {(dashboardData?.summaries?.recentActivities || []).map((activity, index) => {
+                    const Icon = typeof activity.icon === "string" ? getIcon(activity.icon) : activity.icon;
                     return (
                       <div key={index} className="flex items-start gap-3">
                         <div className={`p-2 rounded-lg ${activity.bgColor}`}>
@@ -772,7 +594,7 @@ export default function AdminDashboardPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {popularCourses.map((course, index) => (
+                  {(dashboardData?.summaries?.popularCourses || []).map((course, index) => (
                     <TableRow key={index}>
                       <TableCell className="font-medium">{course.code}</TableCell>
                       <TableCell>{course.name}</TableCell>

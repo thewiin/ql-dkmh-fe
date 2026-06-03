@@ -12,13 +12,11 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { ProtectedRoute } from "@/components/auth/protected-route"
 import { AlertTriangle, CheckCircle } from "lucide-react"
 import CourseRegistrationService from "@/services/courseRegistration.service"
-import RegistrationService from "@/services/registration.service"
 import AuthService from "@/services/auth.service"
 import DangKyService from "@/services/dangKy.service"
 import type {
   CourseRegistrationItem,
   RegisteredCourseItem,
-  TuitionValidationResult,
 } from "@/types"
 
 type LoadState = "loading" | "error" | "success"
@@ -31,92 +29,80 @@ export default function CourseRegistrationPage() {
   const [loadState, setLoadState] = useState<LoadState>("loading")
   const [loadError, setLoadError] = useState<string>("")
   const [registeredCourses, setRegisteredCourses] = useState<RegisteredCourseItem[]>([])
-  const [tuitionValidation, setTuitionValidation] =
-    useState<TuitionValidationResult | null>(null)
   const [maSinhVien, setMaSinhVien] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null)
-  const [completedCourseCodes, setCompletedCourseCodes] = useState<string[]>([])
 
   useEffect(() => {
     let cancelled = false
-
-    async function loadUserAndTuition() {
+    async function loadUser() {
       try {
         const profile = await AuthService.getProfile()
-        if (cancelled) return
-        const currentMaSinhVien = profile.maSinhVien || null
-        setMaSinhVien(currentMaSinhVien)
-        if (currentMaSinhVien) {
-          const completedCodes =
-            await RegistrationService.getCompletedCourseCodesFromBackend(currentMaSinhVien)
-          if (cancelled) return
-          setCompletedCourseCodes(completedCodes)
+        if (!cancelled && profile.maSinhVien) {
+          setMaSinhVien(profile.maSinhVien)
         }
-      } catch {
-        if (cancelled) return
-        console.error("Failed to load user profile")
-      }
-
-      try {
-        const validation = await RegistrationService.validateTuition()
-        if (cancelled) return
-        setTuitionValidation(validation)
-      } catch {
-        if (cancelled) return
-        setTuitionValidation({
-          canRegister: false,
-          status: "unpaid",
-          message:
-            "Không thể xác minh trạng thái học phí. Vui lòng đăng nhập lại hoặc thử sau.",
-        })
-      }
+      } catch {}
     }
-
-    void loadUserAndTuition()
-    return () => {
-      cancelled = true
-    }
+    loadUser()
+    return () => { cancelled = true }
   }, [])
 
   useEffect(() => {
     let cancelled = false
+    setLoadState("loading")
+    setLoadError("")
 
-    async function loadCourses() {
-      setLoadState("loading")
-      setLoadError("")
+    async function load() {
       try {
         const data = await CourseRegistrationService.getOpenCourses(selectedSemester)
         if (cancelled) return
         setCourses(data)
         setLoadState("success")
+
+        if (maSinhVien) {
+          const registrations = await DangKyService.getDangKyBySinhVien(maSinhVien)
+          if (cancelled) return
+
+          const courseMap = new Map(data.map((course) => [course.id, course]))
+          const mappedRegisteredCourses: RegisteredCourseItem[] = []
+
+          registrations.forEach((registration) => {
+            const course = courseMap.get(registration.maLopHocPhan)
+            if (!course) return
+            mappedRegisteredCourses.push({
+              ...course,
+              registeredAt: new Date(registration.ngayDangKy),
+              registrationId: registration.maDangKy,
+            })
+          })
+          setRegisteredCourses(mappedRegisteredCourses)
+        } else {
+          setRegisteredCourses([])
+        }
       } catch {
         if (cancelled) return
-        setLoadError(
-          "Không thể tải danh sách lớp học phần. Vui lòng đăng nhập lại hoặc thử sau."
-        )
+        setLoadError("Không thể tải danh sách lớp học phần. Vui lòng thử lại sau.")
         setLoadState("error")
       }
     }
 
-    void loadCourses()
+    void load()
     return () => {
       cancelled = true
     }
-  }, [selectedSemester])
+  }, [selectedSemester, maSinhVien])
 
-  useEffect(() => {
-    let cancelled = false
-
-    async function loadRegisteredCourses() {
-      if (!maSinhVien || courses.length === 0) return
-      try {
+  const refreshData = async () => {
+    try {
+      const data = await CourseRegistrationService.getOpenCourses(selectedSemester)
+      setCourses(data)
+      
+      if (maSinhVien) {
         const registrations = await DangKyService.getDangKyBySinhVien(maSinhVien)
-        if (cancelled) return
-
-        const courseMap = new Map(courses.map((course) => [course.id, course]))
+        const courseMap = new Map(data.map((course) => [course.id, course]))
         const mappedRegisteredCourses: RegisteredCourseItem[] = []
+        
         registrations.forEach((registration) => {
           const course = courseMap.get(registration.maLopHocPhan)
           if (!course) return
@@ -126,20 +112,14 @@ export default function CourseRegistrationPage() {
             registrationId: registration.maDangKy,
           })
         })
-
         setRegisteredCourses(mappedRegisteredCourses)
-      } catch {
-        if (cancelled) return
       }
+    } catch (error) {
+      console.error("Lỗi khi làm mới dữ liệu:", error)
     }
+  }
 
-    void loadRegisteredCourses()
-    return () => {
-      cancelled = true
-    }
-  }, [maSinhVien, courses])
-
-  const registrationDisabled = tuitionValidation !== null && !tuitionValidation.canRegister
+  const registrationDisabled = false
 
   const filteredCourses = courses.filter((course) => {
     const matchesSearch =
@@ -177,16 +157,24 @@ export default function CourseRegistrationPage() {
      const unregisteredCourse = registeredCourses.find((c) => c.id === courseId)
      if (!unregisteredCourse) return
 
+     if (!window.confirm(`Bạn có chắc chắn muốn hủy đăng ký môn ${unregisteredCourse.name} không?`)) {
+       return
+     }
+
      if (unregisteredCourse.registrationId) {
        try {
-         await DangKyService.deleteDangKy(unregisteredCourse.registrationId)
+         await DangKyService.rutMon(unregisteredCourse.registrationId)
+         setSubmitSuccess(`Đã hủy đăng ký môn ${unregisteredCourse.name}.`)
+         setTimeout(() => setSubmitSuccess(null), 5000)
+         await refreshData()
+         return
        } catch {
          setSubmitError("Không thể hủy đăng ký trên hệ thống. Vui lòng thử lại.")
          return
        }
      }
 
-     // Revert optimistic update: tăng remaining seats khi hủy đăng ký
+     // Revert optimistic update: tăng remaining seats khi hủy đăng ký cho môn chưa submit
      setCourses(courses.map((c) =>
        c.id === courseId
          ? { ...c, remainingSeats: c.remainingSeats + 1 }
@@ -197,56 +185,46 @@ export default function CourseRegistrationPage() {
    }
 
   const handleSubmitRegistration = async () => {
+    if (!maSinhVien) {
+      setSubmitError("Vui lòng đăng nhập để đăng ký.")
+      return
+    }
+
     setSubmitError(null)
     setSubmitSuccess(null)
-
     setIsSubmitting(true)
+
     try {
-      const result = await RegistrationService.executeRegistrationWorkflow({
-        maSV: maSinhVien || "",
-        courses: registeredCourses,
-        completedCourseCodes,
-      })
+      const newRegistrations = registeredCourses.filter((c) => !c.registrationId)
 
-      if (result.success) {
-        setSubmitSuccess(result.message)
-        if (maSinhVien) {
-          const registrations = await DangKyService.getDangKyBySinhVien(maSinhVien)
-          const courseMap = new Map(courses.map((course) => [course.id, course]))
-          const syncedCourses: RegisteredCourseItem[] = []
-          registrations.forEach((registration) => {
-            const course = courseMap.get(registration.maLopHocPhan)
-            if (!course) return
-            syncedCourses.push({
-              ...course,
-              registeredAt: new Date(registration.ngayDangKy),
-              registrationId: registration.maDangKy,
-            })
-          })
-          setRegisteredCourses(syncedCourses)
-        } else {
-          setRegisteredCourses([])
-        }
-
-        // Auto-hide success message after 5 seconds
-        setTimeout(() => {
-          setSubmitSuccess(null)
-        }, 5000)
-      } else {
-        const stepLabelMap: Record<string, string> = {
-          tuition: "Học phí",
-          duplicate: "Trùng môn",
-          prerequisite: "Tiên quyết",
-          conflict: "Trùng lịch",
-          seat: "Sĩ số",
-          submit: "Gửi đăng ký",
-          error_map: "Dữ liệu",
-        }
-        const stepLabel = stepLabelMap[result.step] || "Đăng ký"
-        setSubmitError(`[${stepLabel}] ${result.message || "Vui lòng kiểm tra lại các điều kiện đăng ký."}`)
+      if (newRegistrations.length === 0) {
+        setIsSubmitting(false)
+        return
       }
+
+      let hasError = false
+      for (const course of newRegistrations) {
+        try {
+          await DangKyService.createDangKy({
+            maSinhVien,
+            maLopHocPhan: course.id
+          })
+        } catch {
+          hasError = true
+        }
+      }
+
+      if (hasError) {
+        setSubmitError("Có lỗi xảy ra khi đăng ký một số môn học. Vui lòng kiểm tra lại.")
+      } else {
+        setSubmitSuccess("Đăng ký thành công!")
+        setTimeout(() => setSubmitSuccess(null), 5000)
+      }
+
+      await refreshData()
+
     } catch (error) {
-      setSubmitError("Lỗi khi đăng ký: " + (error instanceof Error ? error.message : "Vui lòng thử lại"))
+      setSubmitError("Lỗi hệ thống khi đăng ký. Vui lòng thử lại.")
     } finally {
       setIsSubmitting(false)
     }
@@ -265,14 +243,6 @@ export default function CourseRegistrationPage() {
             <h1 className="text-2xl font-bold text-foreground">Đăng ký môn học</h1>
             <p className="text-muted-foreground">Học kỳ 2 năm học 2024-2025</p>
           </div>
-
-           {tuitionValidation && !tuitionValidation.canRegister && (
-             <Alert variant="destructive" className="mb-4">
-               <AlertTriangle className="h-4 w-4" />
-               <AlertTitle>Không thể đăng ký môn học</AlertTitle>
-               <AlertDescription>{tuitionValidation.message}</AlertDescription>
-             </Alert>
-           )}
 
            {loadState === "error" && (
              <Alert variant="destructive" className="mb-4">

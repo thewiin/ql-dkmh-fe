@@ -70,7 +70,7 @@ const CourseRegistrationService = {
 
     const [lhpList, monHocRes] = await Promise.all([
       LopHocPhanService.getAllLopHocPhan(),
-      api.get<MonHocApi[]>("/monhoc"),
+      api.get<MonHocApi[]>("/MonHoc"),
     ]);
 
     const monHocList = monHocRes.data;

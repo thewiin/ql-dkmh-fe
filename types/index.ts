@@ -63,15 +63,16 @@ export interface Diem {
 }
 
 export interface LoginRequest {
-  tenDangNhap: string;
+  maSv: string;
   matKhau: string;
 }
 
 export interface LoginResponse {
   token: string;
-  vaiTro: string; // e.g., "Admin", "SinhVien"
-  maSinhVien?: string;
-  tenNguoiDung: string;
+  expireAt: string;
+  maSv: string;
+  ho: string;
+  ten: string;
 }
 
 export interface UserProfile {
@@ -267,4 +268,51 @@ export interface MergeLopHocPhanRequest {
 export interface MergeLopHocPhanResponse {
   message: string;
   mergedLopHocPhanId?: string; // Optional: ID of the resulting merged class
+}
+
+export interface StudentDashboardResponse {
+  stats: StatsCardViewModel[];
+  gpaChart: GpaChartViewModel | null;
+  schedule: ScheduleItemViewModel[];
+  notifications: DashboardNotificationViewModel[];
+}
+
+export interface AdminDashboardResponse {
+  stats: {
+    totalStudents: number;
+    totalCourses: number;
+    totalClasses: number;
+    totalRegistrations: number;
+  };
+  charts: {
+    registrationTrendData: { date: string; registrations: number; cancellations: number }[];
+    revenueData: { month: string; revenue: number; target: number }[];
+    departmentData: { name: string; students: number; color: string }[];
+    paymentStatusData: { status: string; value: number; color: string }[];
+  };
+  summaries: {
+    recentRegistrations: {
+      id: string;
+      name: string;
+      course: string;
+      time: string;
+      status: string;
+    }[];
+    popularCourses: {
+      code: string;
+      name: string;
+      registered: number;
+      capacity: number;
+      percent: number;
+    }[];
+    recentActivities: {
+      type: string;
+      icon: string;
+      title: string;
+      description: string;
+      time: string;
+      color: string;
+      bgColor: string;
+    }[];
+  };
 }

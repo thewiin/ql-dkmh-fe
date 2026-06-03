@@ -94,6 +94,23 @@ export function MergeClassDialog({
   }, [open, defaultSourceClassId, defaultTargetClassId, form]);
 
   async function onSubmit(values: MergeClassFormValues) {
+    const sourceClassInfo = classes.find((c) => c.id === values.sourceClass);
+    const targetClassInfo = classes.find((c) => c.id === values.targetClass);
+
+    if (sourceClassInfo && targetClassInfo) {
+      if (sourceClassInfo.currentStudents + targetClassInfo.currentStudents > targetClassInfo.maxCapacity) {
+        form.setError("root", { type: "manual", message: "Sĩ số sau khi gộp vượt quá sức chứa tối đa của lớp đích." });
+        return;
+      }
+      
+      const sourceCourse = sourceClassInfo.name.split(" - ")[0];
+      const targetCourse = targetClassInfo.name.split(" - ")[0];
+      if (sourceCourse !== targetCourse) {
+        form.setError("root", { type: "manual", message: "Hai lớp học phần phải thuộc cùng một môn học." });
+        return;
+      }
+    }
+
     setIsLoading(true);
     try {
       if (onMerge) {
@@ -106,6 +123,7 @@ export function MergeClassDialog({
       onOpenChange(false);
     } catch (error) {
       console.error("Lỗi khi gộp lớp:", error);
+      form.setError("root", { type: "manual", message: "Gộp lớp thất bại. Vui lòng thử lại." });
     } finally {
       setIsLoading(false);
     }
@@ -129,6 +147,11 @@ export function MergeClassDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
+            {form.formState.errors.root && (
+              <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive font-medium">
+                {form.formState.errors.root.message}
+              </div>
+            )}
             {/* Source Class field */}
             <FormField
               control={form.control}

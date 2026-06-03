@@ -1,16 +1,19 @@
-import api from "../lib/api";
+import api from "../lib/axios";
 import { LoginRequest, LoginResponse, UserProfile } from "../types";
 
 const AuthService = {
   login: async (credentials: LoginRequest): Promise<LoginResponse> => {
     try {
-      const response = await api.post<LoginResponse>("/auth/login", credentials);
+      const response = await api.post<LoginResponse>("/Auth/login", credentials);
       if (response.data && response.data.token) {
         localStorage.setItem("jwt_token", response.data.token);
-        const normalizedRole =
-          response.data.vaiTro?.toLowerCase().includes("admin") ? "admin" : "student";
+        
+        // Backend currently checks SinhViens table, so role is student
+        const normalizedRole = "student";
         localStorage.setItem("auth_role", normalizedRole);
-        localStorage.setItem("auth_user_name", response.data.tenNguoiDung || "");
+        
+        const fullName = `${response.data.ho} ${response.data.ten}`.trim();
+        localStorage.setItem("auth_user_name", fullName);
       }
       return response.data;
     } catch (error) {
@@ -26,7 +29,7 @@ const AuthService = {
 
   getProfile: async (): Promise<UserProfile> => {
     try {
-      const response = await api.get<UserProfile>("/auth/profile");
+      const response = await api.get<UserProfile>("/Auth/me");
       return response.data;
     } catch (error) {
       throw error;
